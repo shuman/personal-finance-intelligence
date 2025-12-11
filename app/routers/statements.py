@@ -1,0 +1,605 @@
+"""
+Statements router - view and query statements and transactions.
+"""
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
+from sqlalchemy.ext.asyncio import AsyncSession
+import csv
+import io
+import os
+import shutil
+
+from app.database import get_db
+from app.services import StatementService
+from pydantic import BaseModel
+from datetime import date
+from decimal import Decimal
+
+
+router = APIRouter(prefix="/api", tags=["statements"])
+
+
+# Pydantic models for responses
+class StatementSummary(BaseModel):
+    id: int
+    filename: str
+    bank_name: str
+    statement_date: Optional[date]
+    total_amount_due: Optional[Decimal]
+    new_balance: Optional[Decimal]
+    credit_utilization_pct: Optional[Decimal]
+    transaction_count: int
+
+    class Config:
+        from_attributes = True
+
+
+class TransactionDetail(BaseModel):
+    id: int
+    transaction_date: date
+    description_raw: str
+    merchant_name: Optional[str]
+    merchant_category: Optional[str]
+    amount: Decimal
+    transaction_type: str
+
+    class Config:
+        from_attributes = True
+
+
+@router.get("/statements", response_model=List[StatementSummary])
+async def list_statements(
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get list of all uploaded statements.
+
+    - **limit**: Maximum number of statements to return (default: 100, max: 500)
+    - **offset**: Number of statements to skip (for pagination)
+
+    Returns list of statement summaries.
+    """
+    from sqlalchemy import select, func
+    from app.models import Statement, Transaction
+
+    service = StatementService(db)
+    statements = await service.get_all_statements(limit=limit, offset=offset)
+
+    # Add transaction count to each statement
+    result = []
+    for stmt in statements:
+        # Count transactions separately
+        count_result = await db.execute(
+            select(func.count(Transaction.id)).where(Transaction.statement_id == stmt.id)
+        )
+        txn_count = count_result.scalar()
+
+        stmt_dict = {
+            "id": stmt.id,
+            "filename": stmt.filename,
+            "bank_name": stmt.bank_name,
+            "statement_date": stmt.statement_date,
+            "total_amount_due": stmt.total_amount_due,
+            "new_balance": stmt.new_balance,
+            "credit_utilization_pct": stmt.credit_utilization_pct,
+            "transaction_count": txn_count or 0
+        }
+        result.append(stmt_dict)
+
+    return result
+
+
+@router.get("/statements/{statement_id}")
+async def get_statement(
+    statement_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get detailed information about a specific statement.
+
+    - **statement_id**: ID of the statement
+
+    Returns complete statement details including financial summary.
+    """
+    from sqlalchemy import select, func
+    from app.models import Transaction
+
+    service = StatementService(db)
+    statement = await service.get_statement(statement_id)
+
+    if not statement:
+        raise HTTPException(status_code=404, detail="Statement not found")
+
+    # Count transactions separately
+    count_result = await db.execute(
+        select(func.count(Transaction.id)).where(Transaction.statement_id == statement.id)
+    )
+    txn_count = count_result.scalar()
+
+    return {
+        "id": statement.id,
+        "filename": statement.filename,
+        "bank_name": statement.bank_name,
+        "account_number": statement.account_number,
+        "card_type": statement.card_type,
+        "statement_date": statement.statement_date,
+        "statement_period_from": statement.statement_period_from,
+        "statement_period_to": statement.statement_period_to,
+        "payment_due_date": statement.payment_due_date,
+        "previous_balance": statement.previous_balance,
+        "payments_credits": statement.payments_credits,
+        "purchases": statement.purchases,
+        "fees_charged": statement.fees_charged,
+        "interest_charged": statement.interest_charged,
+        "new_balance": statement.new_balance,
+        "total_amount_due": statement.total_amount_due,
+        "minimum_payment_due": statement.minimum_payment_due,
+        "credit_limit": statement.credit_limit,
+        "available_credit": statement.available_credit,
+        "credit_utilization_pct": statement.credit_utilization_pct,
+        "rewards_opening": statement.rewards_opening,
+        "rewards_earned": statement.rewards_earned,
+        "rewards_closing": statement.rewards_closing,
+        "transaction_count": txn_count or 0,
+    }
+
+
+@router.get("/statements/{statement_id}/transactions", response_model=List[TransactionDetail])
+async def get_transactions(
+    statement_id: int,
+    category: Optional[str] = Query(None, description="Filter by category"),
+    merchant: Optional[str] = Query(None, description="Filter by merchant name"),
+    limit: int = Query(100, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get transactions for a statement with optional filters.
+
+    - **statement_id**: ID of the statement
+    - **category**: Optional filter by merchant category
+    - **merchant**: Optional filter by merchant name (partial match)
+    - **limit**: Maximum number of transactions (default: 100, max: 1000)
+    - **offset**: Number of transactions to skip (for pagination)
+
+    Returns list of transactions.
+    """
+    service = StatementService(db)
+
+    # Check if statement exists
+    statement = await service.get_statement(statement_id)
+    if not statement:
+        raise HTTPException(status_code=404, detail="Statement not found")
+
+    transactions = await service.get_transactions(
+        statement_id=statement_id,
+        category=category,
+        merchant=merchant,
+        limit=limit,
+        offset=offset
+    )
+
+    return transactions
+
+
+@router.get("/statements/{statement_id}/analytics")
+async def get_statement_analytics(
+    statement_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get analytics for a statement.
+
+    - **statement_id**: ID of the statement
+
+    Returns category breakdown, spending trends, and summary statistics.
+    """
+    service = StatementService(db)
+    analytics = await service.get_analytics(statement_id)
+
+    if not analytics:
+        raise HTTPException(status_code=404, detail="Statement not found")
+
+    statement = analytics["statement"]
+    categories = analytics["categories"]
+
+    return {
+        "statement_id": statement_id,
+        "statement_date": statement.statement_date,
+        "total_spending": analytics["total_spending"],
+        "transaction_count": analytics["transaction_count"],
+        "categories": [
+            {
+                "category_name": cat.category_name,
+                "transaction_count": cat.transaction_count,
+                "total_amount": cat.total_amount,
+                "percentage": cat.percentage_of_spending,
+                "avg_transaction": cat.avg_transaction_amount,
+                "rewards_earned": cat.rewards_earned
+            }
+            for cat in categories
+        ],
+        "top_category": categories[0].category_name if categories else None,
+        "credit_utilization": statement.credit_utilization_pct,
+        "rewards_earned": statement.rewards_earned,
+    }
+
+
+@router.get("/statements/{statement_id}/export/csv")
+async def export_transactions_csv(
+    statement_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Export statement transactions to CSV file.
+
+    - **statement_id**: ID of the statement
+
+    Returns CSV file download.
+    """
+    service = StatementService(db)
+
+    # Get statement
+    statement = await service.get_statement(statement_id)
+    if not statement:
+        raise HTTPException(status_code=404, detail="Statement not found")
+
+    # Get all transactions
+    transactions = await service.get_transactions(statement_id, limit=10000)
+
+    # Create CSV in memory
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Write headers
+    writer.writerow([
+        "Date",
+        "Description",
+        "Merchant",
+        "Category",
+        "Amount",
+        "Type",
+        "Debit/Credit",
+        "City",
+        "International",
+        "Recurring"
+    ])
+
+    # Write data
+    for txn in transactions:
+        writer.writerow([
+            txn.transaction_date.strftime('%Y-%m-%d') if txn.transaction_date else '',
+            txn.description_raw,
+            txn.merchant_name or '',
+            txn.merchant_category or '',
+            str(txn.amount),
+            txn.transaction_type,
+            txn.debit_credit,
+            txn.merchant_city or '',
+            'Yes' if txn.is_international else 'No',
+            'Yes' if txn.is_recurring else 'No'
+        ])
+
+    # Prepare file for download
+    output.seek(0)
+
+    filename = f"transactions_{statement.bank_name}_{statement.statement_date}.csv"
+
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode('utf-8')),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename={filename}"
+        }
+    )
+
+
+@router.get("/analytics/dashboard")
+async def get_dashboard_analytics(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get dashboard analytics across all statements.
+
+    Returns overall spending trends, category analysis, and summary metrics.
+    """
+    service = StatementService(db)
+
+    # Get all statements
+    statements = await service.get_all_statements(limit=12)  # Last 12 statements
+
+    if not statements:
+        return {
+            "total_statements": 0,
+            "total_spending": 0,
+            "avg_monthly_spending": 0,
+            "statements": []
+        }
+
+    total_spending = sum(
+        stmt.purchases or 0
+        for stmt in statements
+    )
+
+    return {
+        "total_statements": len(statements),
+        "total_spending": total_spending,
+        "avg_monthly_spending": total_spending / len(statements) if statements else 0,
+        "latest_statement": {
+            "id": statements[0].id,
+            "date": statements[0].statement_date,
+            "amount_due": statements[0].total_amount_due,
+            "credit_utilization": statements[0].credit_utilization_pct
+        } if statements else None,
+        "statements": [
+            {
+                "id": stmt.id,
+                "date": stmt.statement_date,
+                "spending": stmt.purchases,
+                "fees": stmt.fees_charged,
+                "interest": stmt.interest_charged
+            }
+            for stmt in statements
+        ]
+    }
+
+
+@router.delete("/statements/{statement_id}")
+async def delete_statement(
+    statement_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete a specific statement and all its related data.
+
+    - **statement_id**: ID of the statement to delete
+
+    This will cascade delete all transactions, fees, interest charges,
+    category summaries, and rewards associated with this statement.
+    """
+    from sqlalchemy import select, delete
+    from app.models import Statement, Transaction, Fee, InterestCharge, CategorySummary, RewardsSummary
+    import os
+
+    service = StatementService(db)
+    statement = await service.get_statement(statement_id)
+
+    if not statement:
+        raise HTTPException(status_code=404, detail="Statement not found")
+
+    # Delete the PDF file
+    if statement.file_path and os.path.exists(statement.file_path):
+        try:
+            os.remove(statement.file_path)
+        except Exception as e:
+            print(f"Warning: Could not delete file {statement.file_path}: {e}")
+
+    # Delete from database (cascade will handle related records)
+    await db.execute(delete(Statement).where(Statement.id == statement_id))
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": f"Statement {statement_id} deleted successfully",
+        "filename": statement.filename
+    }
+
+
+@router.post("/database/reset")
+async def reset_database(
+    confirm: str = Query(..., description="Type 'RESET' to confirm"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    **DANGER**: Reset entire database - deletes ALL statements and data.
+
+    - **confirm**: Must be exactly 'RESET' to proceed
+
+    This will:
+    - Delete all statements, transactions, fees, interest charges, etc.
+    - Remove all uploaded PDF files
+    - Cannot be undone!
+    """
+    if confirm != "RESET":
+        raise HTTPException(
+            status_code=400,
+            detail="Confirmation failed. Must provide confirm='RESET' to reset database"
+        )
+
+    from sqlalchemy import delete
+    from app.models import (
+        Statement, Transaction, Fee, InterestCharge,
+        CategorySummary, RewardsSummary, Payment
+    )
+    from app.config import settings
+    import shutil
+
+    # Delete all uploaded files
+    if os.path.exists(settings.upload_dir):
+        try:
+            for filename in os.listdir(settings.upload_dir):
+                file_path = os.path.join(settings.upload_dir, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+        except Exception as e:
+            print(f"Warning: Error cleaning upload directory: {e}")
+
+    # Delete all database records (in correct order due to foreign keys)
+    await db.execute(delete(Payment))
+    await db.execute(delete(CategorySummary))
+    await db.execute(delete(RewardsSummary))
+    await db.execute(delete(InterestCharge))
+    await db.execute(delete(Fee))
+    await db.execute(delete(Transaction))
+    await db.execute(delete(Statement))
+    await db.commit()
+
+    return {
+        "success": True,
+        "message": "Database reset successfully. All data has been deleted.",
+        "warning": "This action cannot be undone."
+    }
+
+
+@router.get("/transactions/search")
+async def search_transactions(
+    date: Optional[str] = Query(None, description="Filter by transaction date (YYYY-MM-DD)"),
+    description: Optional[str] = Query(None, description="Search in description (partial match)"),
+    amount: Optional[float] = Query(None, description="Filter by exact amount"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Search transactions across all statements.
+
+    - **date**: Filter by specific date
+    - **description**: Search description (case-insensitive, partial match)
+    - **amount**: Filter by exact amount
+    - **category**: Filter by merchant category
+
+    Returns list of matching transactions with statement info.
+    """
+    from sqlalchemy import select, and_, or_
+    from app.models import Transaction, Statement
+
+    # Build query
+    query = select(
+        Transaction.id,
+        Transaction.transaction_date,
+        Transaction.description_raw,
+        Transaction.merchant_name,
+        Transaction.merchant_category,
+        Transaction.amount,
+        Transaction.debit_credit,
+        Transaction.transaction_type,
+        Transaction.statement_id,
+        Statement.filename.label('statement_filename')
+    ).join(Statement, Transaction.statement_id == Statement.id)
+
+    # Apply filters
+    conditions = []
+
+    if date:
+        try:
+            from datetime import datetime
+            date_obj = datetime.fromisoformat(date).date()
+            conditions.append(Transaction.transaction_date == date_obj)
+        except:
+            pass
+
+    if description:
+        conditions.append(Transaction.description_raw.ilike(f'%{description}%'))
+
+    if amount is not None:
+        conditions.append(Transaction.amount == amount)
+
+    if category:
+        conditions.append(Transaction.merchant_category == category)
+
+    if conditions:
+        query = query.where(and_(*conditions))
+
+    # Order by date desc
+    query = query.order_by(Transaction.transaction_date.desc())
+
+    result = await db.execute(query)
+    transactions = result.all()
+
+    # Convert to dict
+    return [
+        {
+            "id": txn.id,
+            "transaction_date": txn.transaction_date.isoformat(),
+            "description_raw": txn.description_raw,
+            "merchant_name": txn.merchant_name,
+            "merchant_category": txn.merchant_category,
+            "amount": float(txn.amount),
+            "debit_credit": txn.debit_credit,
+            "transaction_type": txn.transaction_type,
+            "statement_id": txn.statement_id,
+            "statement_filename": txn.statement_filename
+        }
+        for txn in transactions
+    ]
+
+
+@router.get("/transactions/export/csv")
+async def export_transactions_csv(
+    date: Optional[str] = Query(None),
+    description: Optional[str] = Query(None),
+    amount: Optional[float] = Query(None),
+    category: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db)
+):
+    """Export search results to CSV."""
+    from sqlalchemy import select, and_
+    from app.models import Transaction, Statement
+
+    # Same query as search
+    query = select(
+        Transaction.transaction_date,
+        Transaction.description_raw,
+        Transaction.merchant_name,
+        Transaction.merchant_category,
+        Transaction.amount,
+        Transaction.debit_credit,
+        Statement.filename
+    ).join(Statement, Transaction.statement_id == Statement.id)
+
+    conditions = []
+    if date:
+        try:
+            from datetime import datetime
+            date_obj = datetime.fromisoformat(date).date()
+            conditions.append(Transaction.transaction_date == date_obj)
+        except:
+            pass
+    if description:
+        conditions.append(Transaction.description_raw.ilike(f'%{description}%'))
+    if amount is not None:
+        conditions.append(Transaction.amount == amount)
+    if category:
+        conditions.append(Transaction.merchant_category == category)
+
+    if conditions:
+        query = query.where(and_(*conditions))
+
+    query = query.order_by(Transaction.transaction_date.desc())
+
+    result = await db.execute(query)
+    transactions = result.all()
+
+    # Create CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        'Date', 'Description', 'Merchant', 'Category',
+        'Amount', 'Type', 'Statement'
+    ])
+
+    # Data
+    for txn in transactions:
+        writer.writerow([
+            txn.transaction_date.isoformat(),
+            txn.description_raw,
+            txn.merchant_name or '',
+            txn.merchant_category or '',
+            float(txn.amount),
+            'Credit' if txn.debit_credit == 'C' else 'Debit',
+            txn.filename
+        ])
+
+    output.seek(0)
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=transactions_export.csv"}
+    )

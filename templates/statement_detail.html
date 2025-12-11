@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <!-- Back Button -->
+    <a href="/statements" class="text-blue-600 hover:text-blue-800 mb-4 inline-block">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Statements
+    </a>
+
+    <!-- Statement Header -->
+    <div id="statementHeader" class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900 mb-2" id="statementTitle">Loading...</h1>
+                <p class="text-gray-600" id="statementSubtitle"></p>
+            </div>
+            <a id="exportCsvBtn" href="#" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                <i class="fas fa-download mr-2"></i>Export CSV
+            </a>
+        </div>
+    </div>
+
+    <!-- Financial Summary Cards -->
+    <div id="summaryCards" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <!-- Populated by JavaScript -->
+    </div>
+
+    <!-- Category Breakdown -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">
+            <i class="fas fa-chart-pie text-blue-600 mr-2"></i>Spending by Category
+        </h2>
+        <div id="categoryBreakdown" class="space-y-3">
+            <!-- Populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="p-6 border-b">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">
+                <i class="fas fa-receipt text-blue-600 mr-2"></i>Transactions
+            </h2>
+
+            <!-- Filters -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <input type="text" id="merchantFilter" placeholder="Filter by merchant..."
+                       class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <select id="categoryFilter" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Categories</option>
+                </select>
+                <button onclick="applyFilters()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-filter mr-2"></i>Apply Filters
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsBody" class="bg-white divide-y divide-gray-200">
+                    <!-- Populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const statementId = {{ statement_id }};
+    let allCategories = [];
+
+    async function loadStatementData() {
+        try {
+            // Load statement details
+            const stmtResponse = await fetch(`/api/statements/${statementId}`);
+            const statement = await stmtResponse.json();
+            displayStatement(statement);
+
+            // Load analytics
+            const analyticsResponse = await fetch(`/api/statements/${statementId}/analytics`);
+            const analytics = await analyticsResponse.json();
+            displayAnalytics(analytics);
+
+            // Load transactions
+            const txnResponse = await fetch(`/api/statements/${statementId}/transactions?limit=1000`);
+            const transactions = await txnResponse.json();
+            displayTransactions(transactions);
+
+            // Update CSV export link
+            document.getElementById('exportCsvBtn').href = `/api/statements/${statementId}/export/csv`;
+
+        } catch (error) {
+            console.error('Error loading data:', error);
+        }
+    }
+
+    function displayStatement(stmt) {
+        document.getElementById('statementTitle').textContent = stmt.filename;
+        document.getElementById('statementSubtitle').textContent =
+            `${stmt.bank_name} • ${new Date(stmt.statement_date).toLocaleDateString()}`;
+
+        const cards = [
+            {
+                title: 'Total Due',
+                value: `৳${Number(stmt.total_amount_due || 0).toLocaleString()}`,
+                icon: 'fa-wallet',
+                color: 'blue'
+            },
+            {
+                title: 'New Balance',
+                value: `৳${Number(stmt.new_balance || 0).toLocaleString()}`,
+                icon: 'fa-balance-scale',
+                color: 'green'
+            },
+            {
+                title: 'Credit Utilization',
+                value: `${stmt.credit_utilization_pct || 0}%`,
+                icon: 'fa-chart-line',
+                color: stmt.credit_utilization_pct > 50 ? 'red' : 'yellow'
+            },
+            {
+                title: 'Rewards Earned',
+                value: `${stmt.rewards_earned || 0} pts`,
+                icon: 'fa-gift',
+                color: 'purple'
+            }
+        ];
+
+        document.getElementById('summaryCards').innerHTML = cards.map(card => `
+            <div class="bg-white shadow rounded-lg p-6 border-l-4 border-${card.color}-500">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-gray-600">${card.title}</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">${card.value}</p>
+                    </div>
+                    <i class="fas ${card.icon} text-3xl text-${card.color}-500"></i>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function displayAnalytics(analytics) {
+        const categories = analytics.categories || [];
+        allCategories = categories.map(c => c.category_name);
+
+        // Populate category filter
+        const categoryFilter = document.getElementById('categoryFilter');
+        categoryFilter.innerHTML = '<option value="">All Categories</option>' +
+            allCategories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+
+        // Display category breakdown
+        const maxAmount = categories.length > 0 ? categories[0].total_amount : 1;
+
+        document.getElementById('categoryBreakdown').innerHTML = categories.map(cat => `
+            <div>
+                <div class="flex justify-between text-sm mb-1">
+                    <span class="font-medium text-gray-700">${cat.category_name}</span>
+                    <span class="text-gray-900 font-semibold">৳${Number(cat.total_amount).toLocaleString()} (${cat.percentage}%)</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-600 h-2 rounded-full" style="width: ${cat.percentage}%"></div>
+                </div>
+                <div class="text-xs text-gray-500 mt-1">
+                    ${cat.transaction_count} transactions • Avg: ৳${Number(cat.avg_transaction).toLocaleString()}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function displayTransactions(transactions) {
+        document.getElementById('transactionsBody').innerHTML = transactions.map(txn => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    ${new Date(txn.transaction_date).toLocaleDateString()}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                    ${txn.description_raw}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    ${txn.merchant_name || '-'}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    <span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">
+                        ${txn.merchant_category || 'Other'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-sm font-medium text-right ${
+                    txn.debit_credit === 'D' ? 'text-red-600' : 'text-green-600'
+                }">
+                    ${txn.debit_credit === 'D' ? '-' : '+'}৳${Number(txn.amount).toLocaleString()}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function applyFilters() {
+        const merchant = document.getElementById('merchantFilter').value;
+        const category = document.getElementById('categoryFilter').value;
+
+        let url = `/api/statements/${statementId}/transactions?limit=1000`;
+        if (merchant) url += `&merchant=${encodeURIComponent(merchant)}`;
+        if (category) url += `&category=${encodeURIComponent(category)}`;
+
+        const response = await fetch(url);
+        const transactions = await response.json();
+        displayTransactions(transactions);
+    }
+
+    loadStatementData();
+</script>
+{% endblock %}

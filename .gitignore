@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment
+.env
+
+# Database
+*.db
+*.sqlite
+statements.db
+credit_statements.db
+
+# Uploads (sensitive user data)
+static/uploads/
+*.pdf
+*.PDF
+temp_decrypted.pdf
+CBL_*.pdf
+
+# Machine Learning Models
+static/models/*.pkl
+static/models/*.joblib
+*.pkl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Analysis scripts
+analyze_pdf.py
+/tmp/

@@ -1,0 +1,15 @@
+{
+  "trained_samples": 67,
+  "last_trained": "2025-12-11T11:45:44.241269",
+  "accuracy_estimate": 0.9850746268656716,
+  "categories_learned": [
+    "Financial Services",
+    "Food & Dining",
+    "Fuel & Gas",
+    "Groceries & Supermarkets",
+    "Home & Garden",
+    "Shopping & Retail",
+    "Subscriptions & Memberships",
+    "Utilities & Bills"
+  ]
+}

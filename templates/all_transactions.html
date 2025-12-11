@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">All Transactions</h1>
+        <p class="text-gray-600 mt-2">Search and filter transactions across all statements</p>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <input type="date" id="dateFilter" placeholder="Transaction Date"
+                   class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+
+            <input type="text" id="descriptionFilter" placeholder="Search description..."
+                   class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+
+            <input type="number" id="amountFilter" placeholder="Amount"
+                   class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" step="0.01">
+
+            <select id="categoryFilter" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <option value="">All Categories</option>
+                <option value="Dining">Dining</option>
+                <option value="Shopping">Shopping</option>
+                <option value="Groceries">Groceries</option>
+                <option value="Transportation">Transportation</option>
+                <option value="Entertainment">Entertainment</option>
+                <option value="Healthcare">Healthcare</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Travel">Travel</option>
+                <option value="Education">Education</option>
+                <option value="Insurance">Insurance</option>
+                <option value="Subscriptions">Subscriptions</option>
+                <option value="Gas">Gas</option>
+                <option value="Salon">Salon & Beauty</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Clothing">Clothing</option>
+                <option value="Home">Home & Garden</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div class="flex gap-4">
+            <button onclick="searchTransactions()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex-1">
+                <i class="fas fa-search mr-2"></i>Search
+            </button>
+            <button onclick="clearFilters()" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
+                <i class="fas fa-times mr-2"></i>Clear
+            </button>
+            <button onclick="exportResults()" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
+                <i class="fas fa-download mr-2"></i>Export CSV
+            </button>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    <div class="bg-white shadow rounded-lg p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <p class="text-sm text-gray-600">Total Transactions</p>
+                <p class="text-2xl font-bold text-gray-900" id="totalCount">0</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Total Amount</p>
+                <p class="text-2xl font-bold text-gray-900" id="totalAmount">৳0</p>
+            </div>
+            <div>
+                <p class="text-sm text-gray-600">Date Range</p>
+                <p class="text-lg font-semibold text-gray-900" id="dateRange">-</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer" onclick="sortBy('transaction_date')">
+                            Date <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer" onclick="sortBy('amount')">
+                            Amount <i class="fas fa-sort ml-1"></i>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statement</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsBody" class="bg-white divide-y divide-gray-200">
+                    <!-- Populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="bg-gray-50 px-6 py-4 flex items-center justify-between border-t">
+            <div class="text-sm text-gray-700">
+                Showing <span id="showingFrom">0</span> to <span id="showingTo">0</span> of <span id="totalResults">0</span> results
+            </div>
+            <div class="flex gap-2">
+                <button onclick="previousPage()" id="prevBtn" class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50" disabled>
+                    Previous
+                </button>
+                <button onclick="nextPage()" id="nextBtn" class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50" disabled>
+                    Next
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let currentPage = 1;
+    let pageSize = 50;
+    let totalTransactions = 0;
+    let allTransactions = [];
+    let currentSort = { field: 'transaction_date', order: 'desc' };
+
+    async function searchTransactions() {
+        const date = document.getElementById('dateFilter').value;
+        const description = document.getElementById('descriptionFilter').value;
+        const amount = document.getElementById('amountFilter').value;
+        const category = document.getElementById('categoryFilter').value;
+
+        try {
+            // Build query params
+            const params = new URLSearchParams();
+            if (date) params.append('date', date);
+            if (description) params.append('description', description);
+            if (amount) params.append('amount', amount);
+            if (category) params.append('category', category);
+
+            const response = await fetch(`/api/transactions/search?${params}`);
+            allTransactions = await response.json();
+
+            currentPage = 1;
+            displayResults();
+        } catch (error) {
+            console.error('Error searching transactions:', error);
+            alert('Error searching transactions');
+        }
+    }
+
+    function displayResults() {
+        const tbody = document.getElementById('transactionsBody');
+
+        // Sort transactions
+        const sorted = [...allTransactions].sort((a, b) => {
+            let aVal = a[currentSort.field];
+            let bVal = b[currentSort.field];
+
+            if (currentSort.field === 'amount') {
+                aVal = parseFloat(aVal);
+                bVal = parseFloat(bVal);
+            }
+
+            if (currentSort.order === 'asc') {
+                return aVal > bVal ? 1 : -1;
+            } else {
+                return aVal < bVal ? 1 : -1;
+            }
+        });
+
+        // Paginate
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
+        const pageTransactions = sorted.slice(start, end);
+
+        tbody.innerHTML = pageTransactions.map(txn => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    ${new Date(txn.transaction_date).toLocaleDateString()}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-900">
+                    ${txn.description_raw || '-'}
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-600">
+                    ${txn.merchant_name || '-'}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
+                        ${txn.merchant_category || 'Other'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right ${txn.debit_credit === 'C' ? 'text-green-600' : 'text-gray-900'}">
+                    ${txn.debit_credit === 'C' ? '+' : ''}৳${Number(txn.amount).toLocaleString()}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    <a href="/statements/${txn.statement_id}" class="text-blue-600 hover:text-blue-800">
+                        ${txn.statement_filename || 'View'}
+                    </a>
+                </td>
+            </tr>
+        `).join('');
+
+        // Update summary
+        document.getElementById('totalCount').textContent = allTransactions.length;
+
+        const total = allTransactions.reduce((sum, txn) => {
+            return sum + (txn.debit_credit === 'D' ? parseFloat(txn.amount) : -parseFloat(txn.amount));
+        }, 0);
+        document.getElementById('totalAmount').textContent = '৳' + total.toLocaleString();
+
+        if (allTransactions.length > 0) {
+            const dates = allTransactions.map(t => new Date(t.transaction_date)).sort((a, b) => a - b);
+            const minDate = dates[0].toLocaleDateString();
+            const maxDate = dates[dates.length - 1].toLocaleDateString();
+            document.getElementById('dateRange').textContent = `${minDate} - ${maxDate}`;
+        }
+
+        // Update pagination
+        document.getElementById('showingFrom').textContent = start + 1;
+        document.getElementById('showingTo').textContent = Math.min(end, allTransactions.length);
+        document.getElementById('totalResults').textContent = allTransactions.length;
+
+        document.getElementById('prevBtn').disabled = currentPage === 1;
+        document.getElementById('nextBtn').disabled = end >= allTransactions.length;
+    }
+
+    function sortBy(field) {
+        if (currentSort.field === field) {
+            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSort.field = field;
+            currentSort.order = 'desc';
+        }
+        displayResults();
+    }
+
+    function previousPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            displayResults();
+        }
+    }
+
+    function nextPage() {
+        if (currentPage * pageSize < allTransactions.length) {
+            currentPage++;
+            displayResults();
+        }
+    }
+
+    function clearFilters() {
+        document.getElementById('dateFilter').value = '';
+        document.getElementById('descriptionFilter').value = '';
+        document.getElementById('amountFilter').value = '';
+        document.getElementById('categoryFilter').value = '';
+        allTransactions = [];
+        displayResults();
+    }
+
+    async function exportResults() {
+        const date = document.getElementById('dateFilter').value;
+        const description = document.getElementById('descriptionFilter').value;
+        const amount = document.getElementById('amountFilter').value;
+        const category = document.getElementById('categoryFilter').value;
+
+        const params = new URLSearchParams();
+        if (date) params.append('date', date);
+        if (description) params.append('description', description);
+        if (amount) params.append('amount', amount);
+        if (category) params.append('category', category);
+
+        window.location.href = `/api/transactions/export/csv?${params}`;
+    }
+
+    // Load all transactions on page load
+    window.onload = () => searchTransactions();
+</script>
+{% endblock %}

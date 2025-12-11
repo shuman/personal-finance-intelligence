@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        <i class="fas fa-upload text-blue-600"></i>
+        Upload Credit Card Statement
+    </h1>
+    <p class="text-gray-600 mb-8">
+        Upload your credit card statement PDF to extract and analyze transactions automatically.
+    </p>
+
+    <!-- Upload Form -->
+    <div class="bg-white shadow-md rounded-lg p-6">
+        <form id="uploadForm" class="space-y-6">
+            <!-- Drag & Drop Zone -->
+            <div class="drag-drop-zone rounded-lg p-8 text-center cursor-pointer" id="dropZone">
+                <i class="fas fa-cloud-upload-alt text-6xl text-gray-400 mb-4"></i>
+                <p class="text-lg text-gray-700 mb-2">Drag and drop your PDF here</p>
+                <p class="text-sm text-gray-500 mb-4">or click to browse</p>
+                <input type="file" id="fileInput" name="file" accept=".pdf" class="hidden" required>
+                <button type="button" onclick="document.getElementById('fileInput').click()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                    <i class="fas fa-folder-open mr-2"></i>Select File
+                </button>
+            </div>
+
+            <!-- Selected File Display -->
+            <div id="fileInfo" class="hidden bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <i class="fas fa-file-pdf text-red-500 text-2xl mr-3"></i>
+                        <div>
+                            <p class="font-medium text-gray-900" id="fileName"></p>
+                            <p class="text-sm text-gray-600" id="fileSize"></p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="clearFile()" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Password Field -->
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-lock mr-1"></i>PDF Password (if protected)
+                </label>
+                <input type="password" id="password" name="password"
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                       placeholder="Leave blank if not password protected">
+                <p class="mt-1 text-sm text-gray-500">Enter the password if your PDF is encrypted</p>
+            </div>
+
+            <!-- Bank Selection -->
+            <div>
+                <label for="bank_name" class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-university mr-1"></i>Bank
+                </label>
+                <select id="bank_name" name="bank_name"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                    <option value="Amex" selected>American Express (Amex)</option>
+                </select>
+                <p class="mt-1 text-sm text-gray-500">Select your bank (more banks coming soon)</p>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex items-center justify-between">
+                <button type="submit" id="submitBtn"
+                        class="bg-green-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <i class="fas fa-check-circle mr-2"></i>Upload & Process
+                </button>
+                <div id="processing" class="hidden flex items-center text-blue-600">
+                    <i class="fas fa-spinner fa-spin mr-2"></i>
+                    <span>Processing...</span>
+                </div>
+            </div>
+        </form>
+
+        <!-- Status Messages -->
+        <div id="successMessage" class="hidden mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 text-xl mt-0.5 mr-3"></i>
+                <div class="flex-1">
+                    <h3 class="font-medium text-green-900">Success!</h3>
+                    <p class="text-sm text-green-700 mt-1" id="successText"></p>
+                    <a href="/statements" class="inline-block mt-3 text-green-700 font-medium hover:text-green-900">
+                        View Statement <i class="fas fa-arrow-right ml-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="hidden mt-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <i class="fas fa-exclamation-circle text-red-500 text-xl mt-0.5 mr-3"></i>
+                <div class="flex-1">
+                    <h3 class="font-medium text-red-900">Error</h3>
+                    <p class="text-sm text-red-700 mt-1" id="errorText"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <i class="fas fa-file-pdf text-red-500 text-3xl mb-3"></i>
+            <h3 class="font-bold text-lg mb-2">PDF Processing</h3>
+            <p class="text-gray-600 text-sm">Automatically extract data from password-protected PDF statements</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <i class="fas fa-tags text-blue-500 text-3xl mb-3"></i>
+            <h3 class="font-bold text-lg mb-2">Smart Categorization</h3>
+            <p class="text-gray-600 text-sm">Transactions automatically categorized by merchant type</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <i class="fas fa-chart-pie text-green-500 text-3xl mb-3"></i>
+            <h3 class="font-bold text-lg mb-2">Analytics</h3>
+            <p class="text-gray-600 text-sm">Comprehensive spending analysis and insights</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const uploadForm = document.getElementById('uploadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const processing = document.getElementById('processing');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
+
+    // Drag and drop handlers
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type === 'application/pdf') {
+            fileInput.files = files;
+            displayFileInfo(files[0]);
+        } else {
+            showError('Please drop a PDF file');
+        }
+    });
+
+    // File input change handler
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            displayFileInfo(e.target.files[0]);
+        }
+    });
+
+    // Display file info
+    function displayFileInfo(file) {
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
+        fileInfo.classList.remove('hidden');
+    }
+
+    // Clear file
+    function clearFile() {
+        fileInput.value = '';
+        fileInfo.classList.add('hidden');
+    }
+
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    }
+
+    // Form submission
+    uploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Hide messages
+        successMessage.classList.add('hidden');
+        errorMessage.classList.add('hidden');
+
+        // Check file
+        if (!fileInput.files || fileInput.files.length === 0) {
+            showError('Please select a PDF file');
+            return;
+        }
+
+        // Show processing
+        submitBtn.disabled = true;
+        processing.classList.remove('hidden');
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('password', document.getElementById('password').value);
+        formData.append('bank_name', document.getElementById('bank_name').value);
+
+        try {
+            // Use preview endpoint instead of direct upload
+            const response = await fetch('/api/upload/preview', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                // Store preview data and redirect to preview page
+                sessionStorage.setItem('previewData', JSON.stringify(data));
+                window.location.href = '/preview';
+            } else {
+                showError(data.detail || 'Error processing statement');
+                submitBtn.disabled = false;
+                processing.classList.add('hidden');
+            }
+        } catch (error) {
+            showError('Network error: ' + error.message);
+            submitBtn.disabled = false;
+            processing.classList.add('hidden');
+        }
+    });
+
+    function showSuccess(message) {
+        document.getElementById('successText').textContent = message;
+        successMessage.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function showError(message) {
+        document.getElementById('errorText').textContent = message;
+        errorMessage.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+{% endblock %}

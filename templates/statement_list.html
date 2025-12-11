@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">
+                <i class="fas fa-file-invoice text-blue-600"></i>
+                Statements
+            </h1>
+            <p class="text-gray-600 mt-1">View and manage your uploaded credit card statements</p>
+        </div>
+        <div class="flex gap-3">
+            <button onclick="confirmResetDatabase()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
+                <i class="fas fa-trash-alt mr-2"></i>Reset Database
+            </button>
+            <a href="/" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+                <i class="fas fa-plus mr-2"></i>Upload New
+            </a>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading" class="text-center py-12">
+        <i class="fas fa-spinner fa-spin text-4xl text-blue-600"></i>
+        <p class="text-gray-600 mt-4">Loading statements...</p>
+    </div>
+
+    <!-- Statements Table -->
+    <div id="statementsContainer" class="hidden bg-white shadow-md rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statement</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount Due</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Utilization</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Transactions</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="statementsBody" class="bg-white divide-y divide-gray-200">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden bg-white shadow-md rounded-lg p-12 text-center">
+        <i class="fas fa-inbox text-gray-400 text-6xl mb-4"></i>
+        <h3 class="text-xl font-medium text-gray-900 mb-2">No Statements Yet</h3>
+        <p class="text-gray-600 mb-6">Upload your first credit card statement to get started</p>
+        <a href="/" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 inline-block">
+            <i class="fas fa-upload mr-2"></i>Upload Statement
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    async function loadStatements() {
+        try {
+            const response = await fetch('/api/statements?limit=100');
+            const statements = await response.json();
+
+            document.getElementById('loading').classList.add('hidden');
+
+            if (statements.length === 0) {
+                document.getElementById('emptyState').classList.remove('hidden');
+            } else {
+                document.getElementById('statementsContainer').classList.remove('hidden');
+                displayStatements(statements);
+            }
+        } catch (error) {
+            console.error('Error loading statements:', error);
+            document.getElementById('loading').innerHTML =
+                '<p class="text-red-600">Error loading statements. Please try again.</p>';
+        }
+    }
+
+    function displayStatements(statements) {
+        const tbody = document.getElementById('statementsBody');
+        tbody.innerHTML = statements.map(stmt => `
+            <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4">
+                    <div class="text-sm font-medium text-gray-900">${stmt.filename}</div>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">${stmt.bank_name}</td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    ${stmt.statement_date ? new Date(stmt.statement_date).toLocaleDateString() : 'N/A'}
+                </td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-900">
+                    ${stmt.total_amount_due ? '৳' + Number(stmt.total_amount_due).toLocaleString() : 'N/A'}
+                </td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 text-xs font-medium rounded ${
+                        stmt.credit_utilization_pct > 50 ? 'bg-red-100 text-red-800' :
+                        stmt.credit_utilization_pct > 30 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-green-100 text-green-800'
+                    }">
+                        ${stmt.credit_utilization_pct ? stmt.credit_utilization_pct + '%' : 'N/A'}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500">
+                    <i class="fas fa-receipt mr-1"></i>${stmt.transaction_count}
+                </td>
+                <td class="px-6 py-4 text-sm">
+                    <a href="/statements/${stmt.id}" class="text-blue-600 hover:text-blue-800 mr-3">
+                        <i class="fas fa-eye"></i> View
+                    </a>
+                    <a href="/api/statements/${stmt.id}/export/csv" class="text-green-600 hover:text-green-800 mr-3">
+                        <i class="fas fa-download"></i> CSV
+                    </a>
+                    <button onclick="deleteStatement(${stmt.id}, '${stmt.filename}')" class="text-red-600 hover:text-red-800">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function deleteStatement(id, filename) {
+        if (!confirm(`Are you sure you want to delete "${filename}"?\n\nThis will permanently delete:\n- The statement and all its data\n- All transactions\n- The PDF file\n\nThis action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/statements/${id}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert(`Statement "${filename}" deleted successfully!`);
+                loadStatements(); // Reload the list
+            } else {
+                alert('Error: ' + (result.detail || 'Failed to delete statement'));
+            }
+        } catch (error) {
+            console.error('Error deleting statement:', error);
+            alert('Error deleting statement: ' + error.message);
+        }
+    }
+
+    async function confirmResetDatabase() {
+        const confirm1 = confirm(
+            '⚠️ WARNING: RESET ENTIRE DATABASE ⚠️\n\n' +
+            'This will permanently DELETE:\n' +
+            '- ALL statements\n' +
+            '- ALL transactions\n' +
+            '- ALL uploaded files\n' +
+            '- ALL analytics data\n\n' +
+            'This action CANNOT be undone!\n\n' +
+            'Are you absolutely sure?'
+        );
+
+        if (!confirm1) return;
+
+        const confirm2 = prompt(
+            'Type "RESET" (all caps) to confirm database reset:'
+        );
+
+        if (confirm2 !== 'RESET') {
+            alert('Reset cancelled. You must type "RESET" exactly.');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/database/reset?confirm=RESET', {
+                method: 'POST'
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                alert('✅ Database reset successfully!\n\nAll data has been deleted.');
+                loadStatements(); // Reload to show empty state
+            } else {
+                alert('Error: ' + (result.detail || 'Failed to reset database'));
+            }
+        } catch (error) {
+            console.error('Error resetting database:', error);
+            alert('Error resetting database: ' + error.message);
+        }
+    }
+
+    // Load statements on page load
+    loadStatements();
+</script>
+{% endblock %}
