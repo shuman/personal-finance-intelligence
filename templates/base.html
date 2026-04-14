@@ -50,7 +50,7 @@
 <body class="bg-slate-50 text-gray-800 font-sans antialiased">
 
     <!-- Top Navigation Bar -->
-    <header class="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200/60">
+    <header class="relative sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200/60">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-14">
 
@@ -96,8 +96,8 @@
             </div>
         </div>
 
-        <!-- Mobile dropdown menu -->
-        <div id="mobileMenu" class="mobile-menu closed md:hidden border-t border-gray-100 bg-white/95 backdrop-blur-lg">
+        <!-- Mobile dropdown menu (absolute so it overlays page content) -->
+        <div id="mobileMenu" class="mobile-menu closed md:hidden absolute left-0 right-0 top-full border-t border-gray-100 bg-white/95 backdrop-blur-lg shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-2 space-y-0.5">
                 <a href="/" data-nav="/" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-cloud-upload-alt w-4 text-center nav-icon"></i>Upload
