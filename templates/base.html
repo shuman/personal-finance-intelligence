@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,25 +29,83 @@
     {% block extra_head %}{% endblock %}
 
     <style>
-        .drag-drop-zone { border: 2px dashed #cbd5e0; transition: all 0.3s ease; }
-        .drag-drop-zone.dragover { border-color: #4299e1; background-color: #ebf8ff; }
+        .drag-drop-zone {
+            border: 2px dashed #cbd5e0;
+            transition: all 0.3s ease;
+        }
+
+        .drag-drop-zone.dragover {
+            border-color: #4299e1;
+            background-color: #ebf8ff;
+        }
 
         /* Navbar active pill */
-        .nav-link { position: relative; transition: all 0.15s ease; }
-        .nav-link:hover { background: rgba(99,102,241,0.06); }
-        .nav-link.active { background: rgba(99,102,241,0.08); color: #4f46e5; font-weight: 600; }
-        .nav-link.active .nav-icon { color: #6366f1; }
+        .nav-link {
+            position: relative;
+            transition: all 0.15s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(99, 102, 241, 0.06);
+        }
+
+        .nav-link.active {
+            background: rgba(99, 102, 241, 0.08);
+            color: #4f46e5;
+            font-weight: 600;
+        }
+
+        .nav-link.active .nav-icon {
+            color: #6366f1;
+        }
 
         /* Subtle page transition */
-        main { animation: fadeIn 0.2s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        main {
+            animation: fadeIn 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
         /* Mobile menu slide */
-        .mobile-menu { transition: transform 0.25s ease, opacity 0.2s ease; }
-        .mobile-menu.closed { transform: scaleY(0.95) translateY(-8px); opacity: 0; pointer-events: none; }
-        .mobile-menu.open { transform: scaleY(1) translateY(0); opacity: 1; pointer-events: auto; }
+        .mobile-menu {
+            transition: transform 0.25s ease, opacity 0.2s ease;
+        }
+
+        .mobile-menu.closed {
+            transform: scaleY(0.95) translateY(-8px);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .mobile-menu.open {
+            transform: scaleY(1) translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Remove arrows from number inputs globally */
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
     </style>
 </head>
+
 <body class="bg-slate-50 text-gray-800 font-sans antialiased">
 
     <!-- Top Navigation Bar -->
@@ -56,88 +115,118 @@
 
                 <!-- Logo (icon only, navigates home with refresh) -->
                 <a href="/" class="flex items-center gap-2.5 group min-w-0" title="Home">
-                    <div class="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                    <div
+                        class="w-8 h-8 shrink-0 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
                         <i class="fas fa-credit-card text-white text-sm"></i>
                     </div>
-                    <span class="font-semibold text-gray-900 truncate text-sm sm:text-base">{{ app_name }}</span>
                 </a>
 
                 <!-- Desktop Navigation -->
                 <nav class="hidden md:flex items-center gap-1">
-                    <a href="/dashboard" data-nav="/dashboard" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/dashboard" data-nav="/dashboard"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-tachometer-alt text-xs nav-icon"></i>
                         <span>Dashboard</span>
                     </a>
-                    <a href="/" data-nav="/" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/" data-nav="/"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-cloud-upload-alt text-xs nav-icon"></i>
                         <span>Upload</span>
                     </a>
-                    <a href="/statements" data-nav="/statements" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/statements" data-nav="/statements"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-file-invoice text-xs nav-icon"></i>
                         <span>Statements</span>
                     </a>
-                    <a href="/transactions" data-nav="/transactions" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/transactions" data-nav="/transactions"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-receipt text-xs nav-icon"></i>
                         <span>Transactions</span>
                     </a>
-                    <a href="/reports" data-nav="/reports" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/reports" data-nav="/reports"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-chart-pie text-xs nav-icon"></i>
                         <span>Reports</span>
                     </a>
-                    <a href="/accounts" data-nav="/accounts" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/accounts" data-nav="/accounts"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-id-card text-xs nav-icon"></i>
                         <span>Accounts</span>
                     </a>
-                    <a href="/advisor" data-nav="/advisor" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/advisor" data-nav="/advisor"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-robot text-xs nav-icon"></i>
                         <span>Advisor</span>
                     </a>
-                    <a href="/daily-expenses" data-nav="/daily-expenses" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/daily-expenses" data-nav="/daily-expenses"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-wallet text-xs nav-icon"></i>
                         <span>Daily Expenses</span>
                     </a>
-                    <a href="/daily-income" data-nav="/daily-income" class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                    <a href="/daily-income" data-nav="/daily-income"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-hand-holding-usd text-xs nav-icon"></i>
                         <span>Income</span>
+                    </a>
+                    <a href="/liabilities/dashboard" data-nav="/liabilities/dashboard"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                        <i class="fas fa-tasks text-xs nav-icon"></i>
+                        <span>Liabilities</span>
                     </a>
                 </nav>
 
                 <!-- Mobile hamburger -->
-                <button id="mobileMenuBtn" class="md:hidden p-2 -mr-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors" aria-label="Menu">
+                <button id="mobileMenuBtn"
+                    class="md:hidden p-2 -mr-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                    aria-label="Menu">
                     <i class="fas fa-bars text-lg"></i>
                 </button>
             </div>
         </div>
 
         <!-- Mobile dropdown menu (absolute so it overlays page content) -->
-        <div id="mobileMenu" class="mobile-menu closed md:hidden absolute left-0 right-0 top-full border-t border-gray-100 bg-white/95 backdrop-blur-lg shadow-lg">
+        <div id="mobileMenu"
+            class="mobile-menu closed md:hidden absolute left-0 right-0 top-full border-t border-gray-100 bg-white/95 backdrop-blur-lg shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-2 space-y-0.5">
-                <a href="/dashboard" data-nav="/dashboard" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/dashboard" data-nav="/dashboard"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-tachometer-alt w-4 text-center nav-icon"></i>Dashboard
                 </a>
-                <a href="/" data-nav="/" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/" data-nav="/"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-cloud-upload-alt w-4 text-center nav-icon"></i>Upload
                 </a>
-                <a href="/statements" data-nav="/statements" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/statements" data-nav="/statements"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-file-invoice w-4 text-center nav-icon"></i>Statements
                 </a>
-                <a href="/transactions" data-nav="/transactions" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/transactions" data-nav="/transactions"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-receipt w-4 text-center nav-icon"></i>Transactions
                 </a>
-                <a href="/reports" data-nav="/reports" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/reports" data-nav="/reports"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-chart-pie w-4 text-center nav-icon"></i>Reports
                 </a>
-                <a href="/accounts" data-nav="/accounts" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/accounts" data-nav="/accounts"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-id-card w-4 text-center nav-icon"></i>Accounts
                 </a>
-                <a href="/advisor" data-nav="/advisor" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/advisor" data-nav="/advisor"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-robot w-4 text-center nav-icon"></i>Advisor
                 </a>
-                <a href="/daily-expenses" data-nav="/daily-expenses" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/daily-expenses" data-nav="/daily-expenses"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-wallet w-4 text-center nav-icon"></i>Daily Expenses
                 </a>
-                <a href="/daily-income" data-nav="/daily-income" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                <a href="/daily-income" data-nav="/daily-income"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-hand-holding-usd w-4 text-center nav-icon"></i>Income
+                </a>
+                <a href="/liabilities/dashboard" data-nav="/liabilities/dashboard"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                    <i class="fas fa-tasks w-4 text-center nav-icon"></i>Liabilities
                 </a>
             </div>
         </div>
@@ -150,7 +239,8 @@
 
     <!-- Footer -->
     <footer class="border-t border-gray-100 mt-16">
-        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div
+            class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
             <p class="text-xs text-gray-400">{{ app_name }} &middot; Built with FastAPI &amp; Python</p>
             <p class="text-xs text-gray-400">v{{ app_version }} &middot; &copy; 2026</p>
         </div>
@@ -158,37 +248,38 @@
 
     <!-- Navbar active state + mobile menu -->
     <script>
-    (function() {
-        // Highlight active nav link
-        const path = window.location.pathname;
-        // Handle /statements/123 sub-routes too
-        document.querySelectorAll('.nav-link').forEach(link => {
-            const navPath = link.getAttribute('data-nav');
-            if (navPath && (path === navPath || (navPath !== '/' && path.startsWith(navPath)))) {
-                link.classList.add('active');
-            }
-        });
+            (function () {
+                // Highlight active nav link
+                const path = window.location.pathname;
+                // Handle /statements/123 sub-routes too
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    const navPath = link.getAttribute('data-nav');
+                    if (navPath && (path === navPath || (navPath !== '/' && path.startsWith(navPath)))) {
+                        link.classList.add('active');
+                    }
+                });
 
-        // Mobile menu toggle
-        const btn = document.getElementById('mobileMenuBtn');
-        const menu = document.getElementById('mobileMenu');
-        let isOpen = false;
-        btn.addEventListener('click', () => {
-            isOpen = !isOpen;
-            menu.classList.toggle('open', isOpen);
-            menu.classList.toggle('closed', !isOpen);
-            btn.querySelector('i').className = isOpen ? 'fas fa-times text-lg' : 'fas fa-bars text-lg';
-        });
-        // Close on nav click
-        menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-            isOpen = false;
-            menu.classList.add('closed');
-            menu.classList.remove('open');
-            btn.querySelector('i').className = 'fas fa-bars text-lg';
-        }));
-    })();
+                // Mobile menu toggle
+                const btn = document.getElementById('mobileMenuBtn');
+                const menu = document.getElementById('mobileMenu');
+                let isOpen = false;
+                btn.addEventListener('click', () => {
+                    isOpen = !isOpen;
+                    menu.classList.toggle('open', isOpen);
+                    menu.classList.toggle('closed', !isOpen);
+                    btn.querySelector('i').className = isOpen ? 'fas fa-times text-lg' : 'fas fa-bars text-lg';
+                });
+                // Close on nav click
+                menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+                    isOpen = false;
+                    menu.classList.add('closed');
+                    menu.classList.remove('open');
+                    btn.querySelector('i').className = 'fas fa-bars text-lg';
+                }));
+            })();
     </script>
 
     {% block extra_scripts %}{% endblock %}
 </body>
+
 </html>

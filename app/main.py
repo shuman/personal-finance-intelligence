@@ -11,7 +11,7 @@ from app.config import settings
 from app.database import init_db
 from app.routers import upload, statements, ml
 from app.routers import accounts, categories, advisor, budgets, reports
-from app.routers import daily_expenses, daily_income
+from app.routers import daily_expenses, daily_income, liabilities
 
 
 @asynccontextmanager
@@ -99,6 +99,7 @@ app.include_router(budgets.router)
 app.include_router(reports.router)
 app.include_router(daily_expenses.router)
 app.include_router(daily_income.router)
+app.include_router(liabilities.router)
 
 
 # ---------------------------------------------------------------------------

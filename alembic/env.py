@@ -17,7 +17,9 @@ from app.models import (  # noqa: F401
     FinancialInstitution, Account, CategoryRule, AiExtraction,
     Insight, Budget, AdvisorReport, Statement, Transaction, Fee,
     InterestCharge, RewardsSummary, CategorySummary, Payment,
+    LiabilityTemplate, MonthlyRecord, MonthlyLiability
 )
+
 
 config = context.config
 

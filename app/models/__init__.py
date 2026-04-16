@@ -926,3 +926,9 @@ class DailyIncome(Base):
 
     def __repr__(self):
         return f"<DailyIncome(id={self.id}, amount={self.amount}, source={self.source_type}, date={self.transaction_date})>"
+
+# ---------------------------------------------------------------------------
+# NEW: Monthly Liabilities (Standalone Tracker)
+# ---------------------------------------------------------------------------
+from .liabilities import LiabilityTemplate, MonthlyRecord, MonthlyLiability
+

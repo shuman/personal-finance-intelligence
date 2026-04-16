@@ -1,0 +1,524 @@
+{% extends "base.html" %}
+
+{% block title %}Monthly Liabilities Strategy{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<style>
+    /* Clean inputs for inline editing */
+    .inline-input {
+        background: transparent;
+        border: 1px solid transparent;
+        border-radius: 4px;
+        padding: 2px 4px;
+        transition: all 0.2s;
+        width: 100%;
+    }
+    .inline-input:hover {
+        border-color: #e2e8f0;
+        background: #f8fafc;
+    }
+    .inline-input:focus {
+        border-color: #6366f1;
+        background: #fff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+    }
+    .drag-handle {
+        cursor: grab;
+        color: #cbd5e0;
+    }
+    .drag-handle:hover {
+        color: #94a3b8;
+    }
+    .sortable-ghost {
+        opacity: 0.4;
+        background-color: #f1f5f9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900">Monthly Liabilities Tracker</h1>
+        <p class="text-sm text-gray-500 mt-1">Manage and track your monthly recurring payments</p>
+    </div>
+    <div class="flex items-center gap-3">
+        <a href="/liabilities/templates" class="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg hover:bg-indigo-100 transition-colors">
+            <i class="fas fa-list mr-1"></i> Manage Master Templates
+        </a>
+        <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1">
+            <button id="prevMonth" class="px-2 py-1 text-gray-500 hover:text-gray-900 rounded"><i class="fas fa-chevron-left"></i></button>
+            <span id="currentMonthYear" class="text-sm font-semibold w-24 text-center">...</span>
+            <button id="nextMonth" class="px-2 py-1 text-gray-500 hover:text-gray-900 rounded"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Widgets -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <!-- Big Overview - Improved Glassy Light Theme -->
+    <div class="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between" style="box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);">
+        <div class="text-gray-500 text-xs font-bold uppercase tracking-wider">Total Due</div>
+        <div class="mt-2 text-3xl font-extrabold tracking-tight text-gray-900" id="sum-due">৳0</div>
+        
+        <div class="mt-4 flex justify-between text-xs pt-3 border-t border-gray-100">
+            <div><span class="text-gray-400 block mb-0.5 font-medium">Total Cost</span><span id="sum-total" class="text-gray-700 font-bold">৳0</span></div>
+            <div class="text-right"><span class="text-gray-400 block mb-0.5 font-medium">Paid</span><span id="sum-paid" class="text-emerald-500 font-bold">৳0</span></div>
+        </div>
+    </div>
+    
+    <!-- Primary -->
+    <div class="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between" style="box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);">
+        <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-rose-500"></div>
+            <div class="text-gray-500 text-xs font-bold uppercase tracking-wider">Primary Due</div>
+        </div>
+        <div class="mt-2 text-3xl font-extrabold tracking-tight text-rose-600" id="sum-pri-due">৳0</div>
+        
+        <div class="mt-4 flex justify-between text-xs pt-3 border-t border-gray-100">
+            <div><span class="text-gray-400 block mb-0.5 font-medium">Total Cost</span><span id="sum-pri-total" class="text-gray-700 font-bold">৳0</span></div>
+            <div class="text-right"><span class="text-gray-400 block mb-0.5 font-medium">Paid</span><span id="sum-pri-paid" class="text-emerald-500 font-bold">৳0</span></div>
+        </div>
+    </div>
+    
+    <!-- Secondary -->
+    <div class="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between" style="box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);">
+        <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-amber-400"></div>
+            <div class="text-gray-500 text-xs font-bold uppercase tracking-wider">Secondary Due</div>
+        </div>
+        <div class="mt-2 text-3xl font-extrabold tracking-tight text-amber-600" id="sum-sec-due">৳0</div>
+        
+        <div class="mt-4 flex justify-between text-xs pt-3 border-t border-gray-100">
+            <div><span class="text-gray-400 block mb-0.5 font-medium">Total Cost</span><span id="sum-sec-total" class="text-gray-700 font-bold">৳0</span></div>
+            <div class="text-right"><span class="text-gray-400 block mb-0.5 font-medium">Paid</span><span id="sum-sec-paid" class="text-emerald-500 font-bold">৳0</span></div>
+        </div>
+    </div>
+    
+    <!-- Optional -->
+    <div class="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-xl p-5 shadow-sm flex flex-col justify-between" style="box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);">
+        <div class="flex items-center gap-2">
+            <div class="w-2.5 h-2.5 rounded-full bg-gray-400"></div>
+            <div class="text-gray-500 text-xs font-bold uppercase tracking-wider">Optional Due</div>
+        </div>
+        <div class="mt-2 text-3xl font-extrabold tracking-tight text-gray-700" id="sum-opt-due">৳0</div>
+        
+        <div class="mt-4 flex justify-between text-xs pt-3 border-t border-gray-100">
+            <div><span class="text-gray-400 block mb-0.5 font-medium">Total Cost</span><span id="sum-opt-total" class="text-gray-700 font-bold">৳0</span></div>
+            <div class="text-right"><span class="text-gray-400 block mb-0.5 font-medium">Paid</span><span id="sum-opt-paid" class="text-emerald-500 font-bold">৳0</span></div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Table Area -->
+<div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" id="table-container">
+    <div id="loading" class="p-12 text-center text-gray-400">
+        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+        <p>Loading records...</p>
+    </div>
+    
+    <div id="no-data" class="hidden p-12 text-center">
+        <div class="w-16 h-16 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i class="fas fa-calendar-plus text-2xl"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-1">No Liabilities Generated Yet</h3>
+        <p class="text-sm text-gray-500 mb-4">Start this month by generating your checklist from the master templates.</p>
+        <button onclick="generateMonth()" class="bg-indigo-600 text-white px-5 py-2 rounded-lg text-sm font-medium shadow-sm hover:bg-indigo-700 transition">
+            Generate specific month
+        </button>
+    </div>
+    
+    <div id="data-view" class="hidden overflow-x-auto pb-4">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
+                <tr>
+                    <th scope="col" class="px-2 py-3 w-8"></th>
+                    <th scope="col" class="px-4 py-3 text-left w-1/4">Item Name</th>
+                    <th scope="col" class="px-2 py-3 text-left w-32">Priority</th>
+                    <th scope="col" class="px-2 py-3 text-right">Amount</th>
+                    <th scope="col" class="px-4 py-3 text-center">Status</th>
+                    <th scope="col" class="px-2 py-3 text-right">Partial Paid</th>
+                    <th scope="col" class="px-4 py-3 text-left">Paid Date</th>
+                    <th scope="col" class="px-2 py-3 w-8"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-100 text-sm" id="liabilities-tbody">
+                <!-- Data injected via JS -->
+            </tbody>
+            <!-- Add New Row Template -->
+            <tfoot class="bg-gray-50 border-t border-gray-200">
+                <tr>
+                    <td class="px-2 py-3 text-center text-gray-400"><i class="fas fa-plus"></i></td>
+                    <td class="px-4 py-2">
+                        <input type="text" id="new-name" placeholder="Add new item..." class="w-full bg-white border border-gray-200 rounded px-2 py-1.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
+                    </td>
+                    <td class="px-2 py-2">
+                        <select id="new-priority" class="w-full bg-white border border-gray-200 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none">
+                            <option value="Primary">Primary</option>
+                            <option value="Secondary" selected>Secondary</option>
+                            <option value="Optional">Optional</option>
+                        </select>
+                    </td>
+                    <td class="px-2 py-2 text-right">
+                        <input type="text" id="new-amount" placeholder="৳0" 
+                               onfocus="if(this.value) this.value = cleanNumber(this.value)"
+                               onblur="if(this.value) this.value = '৳' + formatCurrency(cleanNumber(this.value))"
+                               class="w-24 text-right bg-white border border-gray-200 rounded px-2 py-1.5 text-sm focus:border-indigo-500 outline-none">
+                    </td>
+                    <td colspan="4" class="px-4 py-2 text-left">
+                        <button onclick="addOneOffItem()" class="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-xs font-semibold hover:bg-gray-50 transition shadow-sm">
+                            Add Item
+                        </button>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    let currentDate = new Date();
+    let currentData = [];
+    let currentRecordId = null;
+    let sortableInst = null;
+    
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    
+    function cleanNumber(val) {
+        if (!val) return 0;
+        return parseFloat(val.toString().replace(/[^0-9.-]+/g,"")) || 0;
+    }
+    
+    function formatCurrency(val) {
+        if (!val) return '0';
+        return Number(val).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+    
+    function updateDateDisplay() {
+        document.getElementById('currentMonthYear').textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+        fetchMonthData();
+    }
+    
+    document.getElementById('prevMonth').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        updateDateDisplay();
+    });
+    
+    document.getElementById('nextMonth').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        updateDateDisplay();
+    });
+    
+    async function fetchMonthData() {
+        document.getElementById('loading').classList.remove('hidden');
+        document.getElementById('no-data').classList.add('hidden');
+        document.getElementById('data-view').classList.add('hidden');
+        
+        try {
+            const y = currentDate.getFullYear();
+            const m = currentDate.getMonth() + 1;
+            const res = await fetch(`/liabilities/api/months/${y}/${m}`);
+            const data = await res.json();
+            
+            if (!data.data) {
+                currentRecordId = null;
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('no-data').classList.remove('hidden');
+                resetSummaries();
+            } else {
+                currentRecordId = data.data.id;
+                currentData = data.liabilities;
+                renderTable();
+                calculateSummaries();
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('data-view').classList.remove('hidden');
+                initSortable();
+            }
+        } catch(e) {
+            console.error(e);
+            alert("Failed to load month data.");
+        }
+    }
+    
+    async function generateMonth() {
+        try {
+            const y = currentDate.getFullYear();
+            const m = currentDate.getMonth() + 1;
+            const res = await fetch(`/liabilities/api/months/${y}/${m}/generate`, {method: 'POST'});
+            if(res.ok) {
+                fetchMonthData();
+            } else {
+                const err = await res.json();
+                alert(err.detail || "Failed to generate");
+            }
+        } catch(e) {
+            alert("Error generating month.");
+        }
+    }
+    
+    function getPriorityColor(p) {
+        if(p === 'Primary') return 'text-rose-600 bg-rose-50';
+        if(p === 'Secondary') return 'text-amber-700 bg-amber-50';
+        return 'text-gray-600 bg-gray-50';
+    }
+    
+    function renderTable() {
+        const tbody = document.getElementById('liabilities-tbody');
+        tbody.innerHTML = '';
+        
+        currentData.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.dataset.id = item.id;
+            
+            // Status styling 
+            let statusBtn = `<button onclick="toggleStatus(${item.id}, 'Paid')" class="px-2 py-1.5 rounded bg-rose-50 text-rose-600 border border-rose-100 font-semibold text-[11px] uppercase tracking-wide w-full hover:bg-rose-100 transition shadow-sm">Unpaid</button>`;
+            let rowOpacity = '';
+            
+            if(item.status === 'Paid') {
+                statusBtn = `<button onclick="toggleStatus(${item.id}, 'Unpaid')" class="px-2 py-1.5 rounded bg-emerald-50 text-emerald-600 border border-emerald-200 font-semibold text-[11px] uppercase tracking-wide w-full hover:bg-emerald-100 transition shadow-sm">Paid ✓</button>`;
+                rowOpacity = 'bg-gray-50/50';
+            } else if (item.status === 'Partially Paid') {
+                statusBtn = `<button onclick="toggleStatus(${item.id}, 'Paid')" class="px-2 py-1.5 rounded bg-amber-50 text-amber-600 border border-amber-200 font-semibold text-[11px] uppercase tracking-wide w-full hover:bg-amber-100 transition shadow-sm">Partial</button>`;
+            }
+            
+            const pDate = item.paid_date || '';
+            const mPart = item.paid_amount || '';
+            
+            tr.className = `transition-colors hover:bg-gray-50 group ${rowOpacity}`;
+            tr.innerHTML = `
+                <td class="px-2 py-2 text-center drag-handle"><i class="fas fa-grip-vertical"></i></td>
+                <td class="px-4 py-2">
+                    <input type="text" value="${item.name}" 
+                           onchange="updateDbField(${item.id}, 'name', this.value)"
+                           class="inline-input font-medium text-gray-900">
+                </td>
+                <td class="px-2 py-2">
+                    <select onchange="updateDbField(${item.id}, 'priority', this.value)" class="inline-input text-xs font-semibold ${getPriorityColor(item.priority)}">
+                        <option value="Primary" ${item.priority==='Primary'?'selected':''}>Primary</option>
+                        <option value="Secondary" ${item.priority==='Secondary'?'selected':''}>Secondary</option>
+                        <option value="Optional" ${item.priority==='Optional'?'selected':''}>Optional</option>
+                    </select>
+                </td>
+                <td class="px-2 py-2 w-32">
+                    <input type="text" value="৳${formatCurrency(item.amount)}" 
+                           onfocus="if(this.value) this.value = cleanNumber(this.value)"
+                           onblur="if(this.value) this.value = '৳' + formatCurrency(cleanNumber(this.value))"
+                           onchange="updateDbField(${item.id}, 'amount', cleanNumber(this.value))"
+                           class="inline-input text-right font-medium text-gray-900">
+                </td>
+                <td class="px-4 py-2 w-28">${statusBtn}</td>
+                <td class="px-2 py-2 w-32">
+                    <input type="text" value="${mPart ? '৳' + formatCurrency(mPart) : ''}" 
+                           onfocus="if(this.value) this.value = cleanNumber(this.value)"
+                           onblur="if(this.value) this.value = '৳' + formatCurrency(cleanNumber(this.value))"
+                           onchange="updatePartial(${item.id}, cleanNumber(this.value))" 
+                           class="inline-input text-right text-sm" 
+                           ${item.status === 'Paid' ? 'disabled readonly' : ''}
+                           placeholder="৳0">
+                </td>
+                <td class="px-4 py-2 w-36">
+                    <input type="text" value="${pDate}" data-id="${item.id}"
+                           class="datepicker inline-input text-gray-600 text-xs text-center uppercase tracking-wide font-medium bg-transparent cursor-pointer" placeholder="YYYY-MM-DD">
+                </td>
+                <td class="px-2 py-2 text-center">
+                    <button onclick="deleteRow(${item.id})" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition transition-opacity px-1" title="Delete">
+                        <i class="fas fa-trash-alt text-sm"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+        
+        flatpickr(".datepicker", {
+            dateFormat: "Y-m-d",
+            allowInput: true,
+            onChange: function(selectedDates, dateStr, instance) {
+                const id = instance.element.dataset.id;
+                updateDbField(id, 'paid_date', dateStr);
+            }
+        });
+    }
+    
+    function initSortable() {
+        const tbody = document.getElementById('liabilities-tbody');
+        if(sortableInst) sortableInst.destroy();
+        
+        sortableInst = new Sortable(tbody, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: async function () {
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                const newOrder = rows.map((row, index) => ({
+                    id: parseInt(row.dataset.id),
+                    sort_order: index
+                }));
+                
+                // Save new order to db
+                fetch(`/liabilities/api/liabilities/reorder`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(newOrder)
+                });
+            }
+        });
+    }
+    
+    async function updateDbField(id, field, value) {
+        if(!value && field !== 'paid_date') return; // Only allow clearing date
+        const body = {};
+        body[field] = value === '' && field === 'paid_date' ? null : value;
+        
+        await fetch(`/liabilities/api/liabilities/${id}/edit`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(body)
+        });
+        
+        // Refresh silently if amount changed
+        if(field === 'amount') {
+            const item = currentData.find(x => x.id == id);
+            if(item) item.amount = value;
+            calculateSummaries();
+        }
+    }
+    
+    async function deleteRow(id) {
+        if(!confirm("Are you sure you want to delete this row?")) return;
+        await fetch(`/liabilities/api/liabilities/${id}`, { method: 'DELETE' });
+        fetchMonthData();
+    }
+    
+    async function addOneOffItem() {
+        const name = document.getElementById('new-name').value;
+        const amt = cleanNumber(document.getElementById('new-amount').value);
+        const pri = document.getElementById('new-priority').value;
+        
+        if(!name || !amt || !currentRecordId) return;
+        
+        await fetch('/liabilities/api/liabilities', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                record_id: currentRecordId,
+                name: name,
+                amount: amt,
+                priority: pri
+            })
+        });
+        
+        document.getElementById('new-name').value = '';
+        document.getElementById('new-amount').value = '';
+        fetchMonthData();
+    }
+
+    // "Enter" key on new amount triggers save
+    document.getElementById('new-amount').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') addOneOffItem();
+    });
+    
+    async function toggleStatus(id, newStatus) {
+        let paid_date = null;
+        if(newStatus === 'Paid') {
+            paid_date = new Date().toISOString().split('T')[0];
+        } else {
+            // Find current item's paid_date
+            const item = currentData.find(i => i.id == id);
+            if (item) paid_date = item.paid_date; // preserve existing if toggling to partial? 
+                                                  // actually, when unpaying, we should clear it.
+            paid_date = null;
+        }
+        
+        await fetch(`/liabilities/api/liabilities/${id}/status`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                status: newStatus,
+                paid_date: paid_date,
+                paid_amount: null
+            })
+        });
+        fetchMonthData();
+    }
+    
+    async function updatePartial(id, val) {
+        const amt = parseFloat(val);
+        if(isNaN(amt) || amt <= 0) {
+            await fetch(`/liabilities/api/liabilities/${id}/status`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({status: 'Unpaid', paid_amount: null, paid_date: null})
+            });
+        } else {
+            await fetch(`/liabilities/api/liabilities/${id}/status`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    status: 'Partially Paid',
+                    paid_amount: amt,
+                    paid_date: new Date().toISOString().split('T')[0]
+                })
+            });
+        }
+        fetchMonthData();
+    }
+    
+    function resetSummaries() {
+        ['sum-total','sum-paid','sum-due','sum-pri-total','sum-pri-paid','sum-pri-due',
+         'sum-sec-total','sum-sec-paid','sum-sec-due','sum-opt-total','sum-opt-paid','sum-opt-due'].forEach(k => {
+             document.getElementById(k).textContent = '৳0';
+         });
+    }
+    
+    function calculateSummaries() {
+        let stats = {
+            Total: {cost:0, paid:0, due:0},
+            Primary: {cost:0, paid:0, due:0},
+            Secondary: {cost:0, paid:0, due:0},
+            Optional: {cost:0, paid:0, due:0}
+        };
+        
+        currentData.forEach(item => {
+            const cost = parseFloat(item.amount) || 0;
+            let paid = 0;
+            if(item.status === 'Paid') paid = cost;
+            else if(item.status === 'Partially Paid') paid = parseFloat(item.paid_amount) || 0;
+            
+            const due = cost - paid;
+            
+            stats.Total.cost += cost;
+            stats.Total.paid += paid;
+            stats.Total.due += due;
+            
+            if(stats[item.priority]) {
+                stats[item.priority].cost += cost;
+                stats[item.priority].paid += paid;
+                stats[item.priority].due += due;
+            } else {
+                stats.Optional.cost += cost;
+                stats.Optional.paid += paid;
+                stats.Optional.due += due;
+            }
+        });
+        
+        document.getElementById('sum-total').textContent = `৳${formatCurrency(stats.Total.cost)}`;
+        document.getElementById('sum-paid').textContent = `৳${formatCurrency(stats.Total.paid)}`;
+        document.getElementById('sum-due').textContent = `৳${formatCurrency(stats.Total.due)}`;
+        
+        ['Primary', 'Secondary', 'Optional'].forEach(cat => {
+            const p = cat.substr(0,3).toLowerCase();
+            document.getElementById(`sum-${p}-total`).textContent = `৳${formatCurrency(stats[cat].cost)}`;
+            document.getElementById(`sum-${p}-paid`).textContent = `৳${formatCurrency(stats[cat].paid)}`;
+            document.getElementById(`sum-${p}-due`).textContent = `৳${formatCurrency(stats[cat].due)}`;
+        });
+    }
+    
+    updateDateDisplay();
+</script>
+{% endblock %}
