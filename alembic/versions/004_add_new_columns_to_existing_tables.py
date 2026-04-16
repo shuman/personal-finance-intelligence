@@ -5,7 +5,8 @@ Revises: 003
 Create Date: 2026-04-14
 
 Adds:
-  statements: account_id, extraction_method, ai_confidence, statement_type
+  statements: extraction_method, ai_confidence, statement_type
+  statements: fk + index for account_id (column already exists from migration 000)
   transactions: account_id, billing_amount, billing_currency, original_amount,
                 original_currency, fx_rate_applied, category_ai, subcategory_ai,
                 category_confidence, category_source, category_rule_id
@@ -35,7 +36,6 @@ def upgrade() -> None:
     # statements table — new columns
     # -----------------------------------------------------------------------
     with op.batch_alter_table("statements") as batch_op:
-        batch_op.add_column(sa.Column("account_id", sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column("extraction_method", sa.String(30), nullable=True))
         batch_op.add_column(sa.Column("ai_confidence", sa.Numeric(3, 2), nullable=True))
         batch_op.add_column(
@@ -155,4 +155,3 @@ def downgrade() -> None:
         batch_op.drop_column("statement_type")
         batch_op.drop_column("ai_confidence")
         batch_op.drop_column("extraction_method")
-        batch_op.drop_column("account_id")
