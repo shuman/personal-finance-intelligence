@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     google_client_id: Optional[str] = None
     google_client_secret: Optional[str] = None
 
+    # Session cookie security
+    # Keep False on Railway: TLS is terminated at the proxy edge, not in the container.
+    # Setting True would break Railway's internal HTTP healthcheck.
+    https_only: bool = False
+
     @property
     def max_file_size_bytes(self) -> int:
         """Convert max file size from MB to bytes"""

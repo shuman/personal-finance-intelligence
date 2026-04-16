@@ -89,10 +89,13 @@ app = FastAPI(
 )
 
 # Session middleware — required by Authlib for Google OAuth PKCE state
+# https_only=False: Railway & most PaaS platforms terminate TLS at their proxy,
+# so the app itself only sees plain HTTP. The session cookie is still secure
+# end-to-end because HTTPS is enforced at the Railway edge.
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.secret_key,
-    https_only=not settings.debug,
+    https_only=settings.https_only,
 )
 
 # Static files
