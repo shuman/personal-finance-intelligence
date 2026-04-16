@@ -9,6 +9,8 @@ from sqlalchemy import select, desc
 from pydantic import BaseModel
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.models import Insight, AdvisorReport
 from app.services.advisor import AdvisorService
 
@@ -38,6 +40,7 @@ async def analyze_period(
     period_to: Optional[date] = Query(None, description="End date (defaults to last of last month)"),
     account_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Trigger AI analysis for a date range.
@@ -75,6 +78,7 @@ async def get_insights(
     priority: Optional[int] = Query(None, ge=1, le=3),
     limit: int = Query(50, le=200),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List AI-generated insights. Filter by type, priority, or read status.
@@ -97,6 +101,7 @@ async def get_insights(
 async def mark_insight_read(
     insight_id: int,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Mark an insight as read."""
     result = await db.execute(select(Insight).where(Insight.id == insight_id))
@@ -114,6 +119,7 @@ async def get_monthly_report(
     month: int,
     account_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get the monthly report for a specific year/month.
@@ -196,6 +202,7 @@ async def get_advisor_report(
     month: int,
     account_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Return a cached advisor report for the given month.
@@ -226,6 +233,7 @@ async def get_advisor_report(
 async def get_latest_report(
     account_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Get the most recent cached advisor report."""
     query = select(AdvisorReport).order_by(
@@ -246,6 +254,7 @@ async def get_latest_report(
 async def list_reports(
     limit: int = Query(12, le=24),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """List all cached advisor reports (history)."""
     result = await db.execute(
@@ -266,6 +275,7 @@ async def force_generate_report(
     month: int,
     account_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Generate (or re-generate) an advisor report for the given month."""
     from app.config import settings

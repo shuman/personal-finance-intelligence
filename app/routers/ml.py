@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.models import Transaction
 from app.ml.categorizer import get_categorizer
 
@@ -14,7 +16,8 @@ router = APIRouter(prefix="/api/ml", tags=["machine-learning"])
 
 @router.post("/train")
 async def train_model(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Train the ML model using all transactions with categories.
@@ -140,7 +143,8 @@ async def update_transaction_category(
     transaction_id: int,
     category: str,
     retrain: bool = True,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Update a transaction's category manually.

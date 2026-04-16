@@ -242,7 +242,15 @@
         <div
             class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2">
             <p class="text-xs text-gray-400">{{ app_name }} &middot; Built with FastAPI &amp; Python</p>
-            <p class="text-xs text-gray-400">v{{ app_version }} &middot; &copy; 2026</p>
+            <div class="flex items-center gap-3">
+                <p class="text-xs text-gray-400">v{{ app_version }} &middot; &copy; 2026</p>
+                {% if current_user is defined and current_user %}
+                <span class="text-gray-300 text-xs">|</span>
+                <span class="text-xs text-gray-400">{{ current_user.name }} ({{ current_user.email }})</span>
+                <span class="text-gray-300 text-xs">|</span>
+                <button onclick="logout()" class="text-xs text-gray-400 hover:text-red-500 transition-colors">Sign out</button>
+                {% endif %}
+            </div>
         </div>
     </footer>
 
@@ -251,7 +259,6 @@
             (function () {
                 // Highlight active nav link
                 const path = window.location.pathname;
-                // Handle /statements/123 sub-routes too
                 document.querySelectorAll('.nav-link').forEach(link => {
                     const navPath = link.getAttribute('data-nav');
                     if (navPath && (path === navPath || (navPath !== '/' && path.startsWith(navPath)))) {
@@ -263,20 +270,26 @@
                 const btn = document.getElementById('mobileMenuBtn');
                 const menu = document.getElementById('mobileMenu');
                 let isOpen = false;
-                btn.addEventListener('click', () => {
-                    isOpen = !isOpen;
-                    menu.classList.toggle('open', isOpen);
-                    menu.classList.toggle('closed', !isOpen);
-                    btn.querySelector('i').className = isOpen ? 'fas fa-times text-lg' : 'fas fa-bars text-lg';
-                });
-                // Close on nav click
-                menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
-                    isOpen = false;
-                    menu.classList.add('closed');
-                    menu.classList.remove('open');
-                    btn.querySelector('i').className = 'fas fa-bars text-lg';
-                }));
+                if (btn && menu) {
+                    btn.addEventListener('click', () => {
+                        isOpen = !isOpen;
+                        menu.classList.toggle('open', isOpen);
+                        menu.classList.toggle('closed', !isOpen);
+                        btn.querySelector('i').className = isOpen ? 'fas fa-times text-lg' : 'fas fa-bars text-lg';
+                    });
+                    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => {
+                        isOpen = false;
+                        menu.classList.add('closed');
+                        menu.classList.remove('open');
+                        btn.querySelector('i').className = 'fas fa-bars text-lg';
+                    }));
+                }
             })();
+
+    async function logout() {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        window.location.href = '/login';
+    }
     </script>
 
     {% block extra_scripts %}{% endblock %}

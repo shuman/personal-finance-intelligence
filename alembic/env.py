@@ -14,6 +14,7 @@ from alembic import context
 # Import all models so Alembic can detect them for autogenerate
 from app.models import (  # noqa: F401
     Base,
+    User,
     FinancialInstitution, Account, CategoryRule, AiExtraction,
     Insight, Budget, AdvisorReport, Statement, Transaction, Fee,
     InterestCharge, RewardsSummary, CategorySummary, Payment,
@@ -60,16 +61,19 @@ async def run_async_migrations() -> None:
 
     configuration = config.get_section(config.config_ini_section, {})
     # Use the app's database URL (strip async driver for alembic sync usage)
-    configuration["sqlalchemy.url"] = settings.database_url.replace(
+    db_url = settings.get_database_url
+    configuration["sqlalchemy.url"] = db_url.replace(
         "sqlite+aiosqlite", "sqlite"
+    ).replace(
+        "postgresql+asyncpg", "postgresql"
     )
 
     connectable = async_engine_from_config(
         configuration,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
-        # aiosqlite needs the async driver
-        url=settings.database_url,
+        # aiosqlite/asyncpg needs the async driver
+        url=settings.get_database_url,
     )
 
     async with connectable.connect() as connection:

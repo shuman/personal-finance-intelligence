@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.models import Account
 from app.services.report_engine import ReportEngine
 
@@ -34,6 +36,7 @@ async def dashboard(
     month: Optional[int] = Query(None),
     account_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Return all 6 reports for the dashboard."""
     from datetime import date as _date
@@ -65,6 +68,7 @@ async def dashboard(
 async def yearly_dashboard(
     account_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Return all yearly dashboard data (12-month aggregated)."""
     engine = ReportEngine(db)
@@ -94,6 +98,7 @@ async def individual_report(
     month: Optional[int] = Query(None),
     account_id: Optional[int] = Query(None),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Return a single report by ID for drill-down view."""
     from datetime import date as _date

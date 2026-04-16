@@ -11,6 +11,8 @@ from datetime import date
 from collections import defaultdict
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.models import Budget, Transaction
 from app.config import settings
 
@@ -124,6 +126,7 @@ async def get_budget_status(
     year: Optional[int] = None,
     month: Optional[int] = None,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get current month's spending vs budget for each category.

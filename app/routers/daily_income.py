@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.services.daily_income_service import DailyIncomeService
 
 router = APIRouter(prefix="/api/daily-income", tags=["daily-income"])
@@ -74,7 +76,8 @@ class IncomeResponse(BaseModel):
 @router.post("", response_model=IncomeResponse)
 async def create_income(
     body: IncomeCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Save a new income entry.
@@ -97,7 +100,8 @@ async def list_income(
     source_type: Optional[str] = Query(None, description="Filter by source type"),
     limit: int = Query(100, ge=1, le=500, description="Max results"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List income entries with optional filters.
@@ -116,7 +120,8 @@ async def list_income(
 @router.get("/{income_id}", response_model=IncomeResponse)
 async def get_income(
     income_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a single income entry by ID."""
     service = DailyIncomeService(db)
@@ -130,7 +135,8 @@ async def get_income(
 async def update_income(
     income_id: int,
     body: IncomeUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update an income entry."""
     service = DailyIncomeService(db)
@@ -156,7 +162,8 @@ async def update_income(
 @router.delete("/{income_id}")
 async def delete_income(
     income_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete an income entry."""
     service = DailyIncomeService(db)
@@ -172,7 +179,8 @@ async def delete_income(
 async def get_income_statistics(
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get income statistics for a date range.
@@ -187,7 +195,8 @@ async def get_income_statistics(
 async def get_monthly_income_summary(
     year: int,
     month: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get income summary for a specific month.

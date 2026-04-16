@@ -10,6 +10,8 @@ from datetime import date
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.models.liabilities import LiabilityTemplate, MonthlyRecord, MonthlyLiability
 
 router = APIRouter(prefix="/liabilities", tags=["liabilities"])

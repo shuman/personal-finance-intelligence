@@ -15,6 +15,8 @@ from app.database import get_db
 from app.services import StatementService
 from app.config import settings
 from app.parsers import ParserFactory, AmexParser
+from app.utils.auth import get_current_user
+from app.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -108,6 +110,7 @@ async def preview_statement(
         description="If true, reuse cached AI extraction for identical PDFs (same file hash)",
     ),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Parse PDF and return extracted data for preview before saving.
@@ -275,7 +278,8 @@ async def preview_statement(
 @router.post("/upload/save")
 async def save_statement(
     data: Dict[str, Any] = Body(...),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Save the previewed and edited statement data to database.
@@ -357,7 +361,8 @@ async def upload_statement(
         True,
         description="If true, reuse cached AI extraction for identical PDFs",
     ),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Upload and process a credit card statement PDF (direct save without preview).

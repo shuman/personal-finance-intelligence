@@ -11,6 +11,8 @@ from datetime import datetime
 from decimal import Decimal
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.models import FinancialInstitution, Account, Statement, Transaction
 
 router = APIRouter(prefix="/api", tags=["accounts"])
@@ -111,6 +113,7 @@ async def list_institutions(db: AsyncSession = Depends(get_db)):
 async def list_accounts(
     active_only: bool = True,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """List all registered accounts/cards."""
     query = select(Account)
@@ -125,6 +128,7 @@ async def list_accounts(
 async def create_account(
     body: AccountCreate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Register a new card or account."""
     # Generate hash from full account number if provided, else from masked
@@ -169,6 +173,7 @@ async def update_account(
     account_id: int,
     body: AccountUpdate,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update account details (nickname, limits, rewards info, etc.)."""
     result = await db.execute(select(Account).where(Account.id == account_id))
@@ -190,6 +195,7 @@ async def update_account(
 async def get_account_summary(
     account_id: int,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get spending, rewards, and statement summary across all statements

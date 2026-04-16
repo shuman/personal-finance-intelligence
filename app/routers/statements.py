@@ -15,6 +15,8 @@ from app.services import StatementService
 from pydantic import BaseModel
 from datetime import date
 from decimal import Decimal
+from app.utils.auth import get_current_user
+from app.models import User
 
 
 router = APIRouter(prefix="/api", tags=["statements"])
@@ -64,7 +66,8 @@ class TransactionDetail(BaseModel):
 async def list_statements(
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get list of all uploaded statements.
@@ -112,7 +115,8 @@ async def list_statements(
 @router.get("/statements/{statement_id}")
 async def get_statement(
     statement_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get detailed information about a specific statement.
@@ -171,7 +175,8 @@ async def get_transactions(
     merchant: Optional[str] = Query(None, description="Filter by merchant name"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get transactions for a statement with optional filters.
@@ -205,7 +210,8 @@ async def get_transactions(
 @router.get("/statements/{statement_id}/analytics")
 async def get_statement_analytics(
     statement_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get analytics for a statement.
@@ -248,7 +254,8 @@ async def get_statement_analytics(
 @router.get("/statements/{statement_id}/export/csv")
 async def export_transactions_csv(
     statement_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Export statement transactions to CSV file.
@@ -316,7 +323,8 @@ async def export_transactions_csv(
 
 @router.get("/analytics/dashboard")
 async def get_dashboard_analytics(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get dashboard analytics across all statements.
@@ -367,7 +375,8 @@ async def get_dashboard_analytics(
 @router.delete("/statements/{statement_id}")
 async def delete_statement(
     statement_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Delete a specific statement and all its related data.
@@ -482,7 +491,8 @@ async def search_transactions(
     description: Optional[str] = Query(None, description="Search in description (partial match)"),
     amount: Optional[float] = Query(None, description="Filter by exact amount"),
     category: Optional[str] = Query(None, description="Filter by category"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Search transactions across all statements.

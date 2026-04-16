@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.services.daily_expense_service import DailyExpenseService
 
 router = APIRouter(prefix="/api/daily-expenses", tags=["daily-expenses"])
@@ -85,7 +87,8 @@ class ExpenseResponse(BaseModel):
 @router.post("", response_model=ExpenseResponse)
 async def create_expense(
     body: ExpenseCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Save a new draft expense (no AI processing).
@@ -109,7 +112,8 @@ async def list_expenses(
     date_to: Optional[date] = Query(None, description="Filter by date <= date_to"),
     limit: int = Query(100, ge=1, le=500, description="Max results"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List expenses with optional filters.
@@ -128,7 +132,8 @@ async def list_expenses(
 @router.get("/drafts", response_model=List[ExpenseResponse])
 async def get_draft_expenses(
     limit: int = Query(50, ge=1, le=200),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get all draft expenses (for batch processing selection UI).
@@ -141,7 +146,8 @@ async def get_draft_expenses(
 @router.get("/processed", response_model=List[ExpenseResponse])
 async def get_processed_expenses(
     limit: int = Query(50, ge=1, le=200),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get processed expenses awaiting user review.
@@ -155,7 +161,8 @@ async def get_processed_expenses(
 @router.post("/batch-process")
 async def batch_process_expenses(
     body: BatchProcessRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Batch process selected expenses with Claude AI.
@@ -196,7 +203,8 @@ async def batch_process_expenses(
 @router.get("/{expense_id}", response_model=ExpenseResponse)
 async def get_expense(
     expense_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Get a single expense by ID."""
     service = DailyExpenseService(db)
@@ -210,7 +218,8 @@ async def get_expense(
 async def update_expense(
     expense_id: int,
     body: ExpenseUpdate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Apply user override/corrections to an expense.
@@ -234,7 +243,8 @@ async def update_expense(
 @router.delete("/{expense_id}")
 async def delete_expense(
     expense_id: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Delete an expense."""
     service = DailyExpenseService(db)
@@ -250,7 +260,8 @@ async def delete_expense(
 async def get_expense_statistics(
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get expense statistics for a date range.

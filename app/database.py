@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 # Create async engine
 engine = create_async_engine(
-    settings.database_url,
+    settings.get_database_url,
     echo=settings.debug,
     future=True
 )

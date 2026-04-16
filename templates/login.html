@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — {{ app_name }}</title>
+    <meta name="description" content="Sign in to your Personal Finance Intelligence account to manage and analyse your financial statements.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            padding: 1.5rem;
+        }
+
+        /* ---- Animated background orbs ---- */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 60% 40% at 20% 20%, rgba(99,102,241,0.3) 0%, transparent 70%),
+                radial-gradient(ellipse 50% 50% at 80% 80%, rgba(139,92,246,0.25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .card {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            backdrop-filter: blur(24px);
+            box-shadow: 0 32px 64px rgba(0,0,0,0.4);
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ---- Logo ---- */
+        .logo {
+            width: 52px; height: 52px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.4rem; color: #fff;
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 8px 24px rgba(99,102,241,0.4);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 0.25rem;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 0.85rem;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 2rem;
+        }
+
+        /* ---- Google button ---- */
+        .btn-google {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.2s, border-color 0.2s, transform 0.15s;
+            margin-bottom: 1.5rem;
+        }
+        .btn-google:hover {
+            background: rgba(255,255,255,0.14);
+            border-color: rgba(255,255,255,0.25);
+            transform: translateY(-1px);
+        }
+        .btn-google img { width: 20px; height: 20px; }
+
+        /* ---- Divider ---- */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .divider hr {
+            flex: 1;
+            border: none;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .divider span {
+            font-size: 0.78rem;
+            color: rgba(255,255,255,0.35);
+            white-space: nowrap;
+        }
+
+        /* ---- Form fields ---- */
+        .field { margin-bottom: 1rem; }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: rgba(255,255,255,0.7);
+            margin-bottom: 0.4rem;
+        }
+
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        input[type="email"]::placeholder,
+        input[type="password"]::placeholder { color: rgba(255,255,255,0.25); }
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            border-color: rgba(99,102,241,0.7);
+            background: rgba(255,255,255,0.12);
+        }
+
+        /* ---- Submit button ---- */
+        .btn-primary {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            padding: 0.8rem;
+            margin-top: 0.5rem;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: none;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+            box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+        }
+        .btn-primary:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 8px 28px rgba(99,102,241,0.5); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+        /* ---- Footer link ---- */
+        .foot {
+            text-align: center;
+            font-size: 0.83rem;
+            color: rgba(255,255,255,0.4);
+            margin-top: 1.5rem;
+        }
+        .foot a { color: #a5b4fc; text-decoration: none; font-weight: 500; }
+        .foot a:hover { color: #c4b5fd; }
+
+        /* ---- Alert ---- */
+        .alert {
+            padding: 0.7rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        .alert.error { background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+        .alert.success { background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3); color: #86efac; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo"><i class="fas fa-credit-card"></i></div>
+        <h1>Welcome back</h1>
+        <p class="subtitle">Sign in to {{ app_name }}</p>
+
+        <div id="alert" class="alert"></div>
+
+        <!-- Google Sign In -->
+        <a href="/api/auth/google/login" class="btn-google" id="googleBtn">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+            Continue with Google
+        </a>
+
+        <div class="divider">
+            <hr><span>or sign in with email</span><hr>
+        </div>
+
+        <form id="loginForm">
+            <div class="field">
+                <label for="email">Email address</label>
+                <input type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <div class="field">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Your password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-primary" id="submitBtn">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+
+        <p class="foot">Don't have an account? <a href="/register">Create one</a></p>
+    </div>
+
+    <script>
+    const form = document.getElementById('loginForm');
+    const alert = document.getElementById('alert');
+    const btn = document.getElementById('submitBtn');
+
+    function showAlert(msg, type = 'error') {
+        alert.textContent = msg;
+        alert.className = `alert ${type}`;
+        alert.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in…';
+        alert.style.display = 'none';
+
+        const body = {
+            email: document.getElementById('email').value,
+            password: document.getElementById('password').value,
+        };
+
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                credentials: 'include',
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                showAlert(data.detail || 'Login failed. Please check your credentials.');
+            } else {
+                showAlert('Signed in! Redirecting…', 'success');
+                setTimeout(() => window.location.href = '/', 600);
+            }
+        } catch (err) {
+            showAlert('Network error. Please try again.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+        }
+    });
+    </script>
+</body>
+</html>

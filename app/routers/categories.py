@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from datetime import datetime
 
 from app.database import get_db
+from app.utils.auth import get_current_user
+from app.models import User
 from app.models import CategoryRule, Transaction
 from app.services.category_engine import CategoryEngine, seed_category_rules
 
@@ -52,6 +54,7 @@ async def list_category_rules(
     active_only: bool = Query(True),
     limit: int = Query(200, le=500),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """List all learned category rules."""
     query = select(CategoryRule)
@@ -93,6 +96,7 @@ async def update_rule(
     rule_id: int,
     body: CategoryRuleUpdateRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Update fields on an existing category rule."""
     result = await db.execute(select(CategoryRule).where(CategoryRule.id == rule_id))
@@ -122,6 +126,7 @@ async def override_transaction_category(
     transaction_id: int,
     body: CategoryOverrideRequest,
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Override a transaction's category.
@@ -152,6 +157,7 @@ async def predict_category(
     description: str = Query(...),
     country: str = Query("BD"),
     db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """Predict the category for a given merchant/description."""
     engine = CategoryEngine(db)

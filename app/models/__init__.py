@@ -16,6 +16,37 @@ from app.database import Base
 
 
 # ---------------------------------------------------------------------------
+# NEW: User Model
+# ---------------------------------------------------------------------------
+
+class User(Base):
+    """
+    Application User. Supports standard email/password login and Google OAuth.
+    """
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    email: Mapped[str] = mapped_column(String(150), unique=True, index=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(150), nullable=False)
+    
+    # Auth fields
+    hashed_password: Mapped[Optional[str]] = mapped_column(String(255))
+    google_id: Mapped[Optional[str]] = mapped_column(String(150), unique=True, nullable=True)
+    profile_picture: Mapped[Optional[str]] = mapped_column(String(500))
+
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+
+    accounts: Mapped[List["Account"]] = relationship("Account", back_populates="user")
+    statements: Mapped[List["Statement"]] = relationship("Statement", back_populates="user")
+
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email}, name={self.name})>"
+
+
+# ---------------------------------------------------------------------------
 # NEW: Financial Institution Registry
 # ---------------------------------------------------------------------------
 
@@ -68,6 +99,7 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
     institution_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("financial_institutions.id", ondelete="SET NULL"), index=True
     )
@@ -108,6 +140,7 @@ class Account(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="accounts")
     institution: Mapped[Optional["FinancialInstitution"]] = relationship(
         "FinancialInstitution", back_populates="accounts"
     )
@@ -133,6 +166,7 @@ class CategoryRule(Base):
     __tablename__ = "category_rules"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
 
     # The merchant name pattern (lowercase, stripped) to match against
     merchant_pattern: Mapped[str] = mapped_column(String(200), nullable=False, index=True)
@@ -221,6 +255,7 @@ class Insight(Base):
     __tablename__ = "insights"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
 
     insight_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     # reward_expiry_alert | fx_cost_report | budget_breach | overspending |
@@ -266,6 +301,7 @@ class Budget(Base):
     __tablename__ = "budgets"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
 
     category: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     subcategory: Mapped[Optional[str]] = mapped_column(String(100))
@@ -310,7 +346,7 @@ class AdvisorReport(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # Which user/account/month this report covers
-    user_id: Mapped[Optional[str]] = mapped_column(String(100), index=True)
+    user_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
     year: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     month: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     account_id: Mapped[Optional[int]] = mapped_column(
@@ -400,6 +436,7 @@ class Statement(Base):
     __tablename__ = "statements"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
 
     # File Information
     filename: Mapped[str] = mapped_column(String(500), unique=True, nullable=False, index=True)
@@ -471,6 +508,7 @@ class Statement(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
 
     # Relationships
+    user: Mapped["User"] = relationship("User", back_populates="statements")
     account: Mapped[Optional["Account"]] = relationship("Account", back_populates="statements")
     transactions: Mapped[List["Transaction"]] = relationship(
         "Transaction", back_populates="statement", cascade="all, delete-orphan"
