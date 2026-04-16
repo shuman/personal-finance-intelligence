@@ -7,9 +7,10 @@ Create Date: 2026-04-14
 Adds:
   statements: extraction_method, ai_confidence, statement_type
   statements: fk + index for account_id (column already exists from migration 000)
-  transactions: account_id, billing_amount, billing_currency, original_amount,
+  transactions: billing_amount, billing_currency, original_amount,
                 original_currency, fx_rate_applied, category_ai, subcategory_ai,
                 category_confidence, category_source, category_rule_id
+  transactions: fk + index for account_id (column already exists from migration 000)
   rewards_summary: reward_program_name, expired_this_period, accelerated_tiers,
                    estimated_value_bdt
   category_summary: subcategory_name column
@@ -56,7 +57,6 @@ def upgrade() -> None:
     # transactions table — new columns
     # -----------------------------------------------------------------------
     with op.batch_alter_table("transactions") as batch_op:
-        batch_op.add_column(sa.Column("account_id", sa.Integer(), nullable=True))
         batch_op.add_column(sa.Column("billing_amount", sa.Numeric(15, 2), nullable=True))
         batch_op.add_column(sa.Column("billing_currency", sa.String(3), nullable=True))
         batch_op.add_column(sa.Column("original_amount", sa.Numeric(15, 2), nullable=True))
@@ -148,7 +148,6 @@ def downgrade() -> None:
         batch_op.drop_column("original_amount")
         batch_op.drop_column("billing_currency")
         batch_op.drop_column("billing_amount")
-        batch_op.drop_column("account_id")
 
     with op.batch_alter_table("statements") as batch_op:
         batch_op.drop_index("ix_statements_account_id")
