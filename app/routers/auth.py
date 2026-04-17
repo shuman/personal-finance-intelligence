@@ -319,6 +319,12 @@ async def signup(
         password: Password (minimum 8 characters)
         full_name: User's full name (optional)
     """
+    if not settings.allow_signup:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration is disabled."
+        )
+
     # Check if user already exists
     existing_user = await get_user_by_email(db, signup_data.email)
     if existing_user:

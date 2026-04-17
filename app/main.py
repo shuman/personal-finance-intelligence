@@ -1,6 +1,7 @@
 """
 Main FastAPI application — Personal Finance Intelligence Platform.
 """
+import logging
 from fastapi import FastAPI, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -10,13 +11,114 @@ from starlette.middleware.sessions import SessionMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+logger = logging.getLogger(__name__)
+
 from app.config import settings
-from app.database import init_db, get_db
+from app.database import init_db, get_db, db_error as _initial_db_error
+import app.database as _db_module
 from app.routers import upload, statements, ml, auth
 from app.routers import accounts, categories, advisor, budgets, reports
 from app.routers import daily_expenses, daily_income, liabilities
 from app.utils.page_auth import require_login
 from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class DatabaseAvailabilityMiddleware(BaseHTTPMiddleware):
+    """Return a friendly 503 page when the database is down instead of crashing."""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if _db_module.db_error:
+            # Allow static assets through so the error page can load CSS/fonts
+            if request.url.path.startswith("/static"):
+                return await call_next(request)
+            accept = request.headers.get("accept", "")
+            if "text/html" in accept:
+                html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Unavailable — {settings.app_name}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div class="max-w-md w-full mx-auto px-6 py-16 text-center">
+    <div class="mb-6 text-red-400">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+          d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-800 mb-3">System Unavailable</h1>
+    <p class="text-gray-500 mb-8">
+      We’re having trouble reaching the database right now.<br>
+      Our team has been notified. Please try again in a few minutes.
+    </p>
+    <button onclick="window.location.reload()"
+      class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582M20 20v-5h-.581M5.635 19A9 9 0 1019 6.364"/>
+      </svg>
+      Try again
+    </button>
+  </div>
+</body>
+</html>"""
+                return Response(content=html, status_code=503, media_type="text/html")
+            # JSON / API clients
+            return Response(
+                content='{{"detail":"Service temporarily unavailable. Database is unreachable."}}',
+                status_code=503,
+                media_type="application/json",
+            )
+        try:
+            return await call_next(request)
+        except Exception as exc:
+            err_lower = str(exc).lower()
+            if any(k in err_lower for k in ("connection", "could not connect", "operational", "timeout", "refused")):
+                logger.error("Database connectivity error during request: %s", exc)
+                accept = request.headers.get("accept", "")
+                if "text/html" in accept:
+                    html = f"""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>System Unavailable — {settings.app_name}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div class="max-w-md w-full mx-auto px-6 py-16 text-center">
+    <div class="mb-6 text-red-400">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+          d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+    </div>
+    <h1 class="text-3xl font-bold text-gray-800 mb-3">System Unavailable</h1>
+    <p class="text-gray-500 mb-8">
+      We’re having trouble reaching the database right now.<br>
+      Our team has been notified. Please try again in a few minutes.
+    </p>
+    <button onclick="window.location.reload()"
+      class="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582M20 20v-5h-.581M5.635 19A9 9 0 1019 6.364"/>
+      </svg>
+      Try again
+    </button>
+  </div>
+</body>
+</html>"""
+                    return Response(content=html, status_code=503, media_type="text/html")
+                return Response(
+                    content='{{"detail":"Service temporarily unavailable. Database is unreachable."}}',
+                    status_code=503,
+                    media_type="application/json",
+                )
+            raise
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -41,7 +143,11 @@ async def lifespan(app: FastAPI):
     """
     # 1. Initialize database (Alembic migrations + create_all fallback)
     await init_db()
-    print(f"✓ Database initialized: {settings.database_url}")
+    if _db_module.db_error:
+        print(f"✖ Database unavailable: {_db_module.db_error}")
+        print("  Server will start but return 503 for all requests until the DB is reachable.")
+    else:
+        print(f"✓ Database initialized: {settings.database_url}")
 
     # 2. Seed financial institutions (idempotent)
     try:
@@ -111,6 +217,9 @@ app.add_middleware(
 # Add security headers to all responses
 app.add_middleware(SecurityHeadersMiddleware)
 
+# Handle DB-down gracefully — must be outermost so it wraps everything
+app.add_middleware(DatabaseAvailabilityMiddleware)
+
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -147,12 +256,18 @@ async def login_page(request: Request):
     """Login page - redirects to dashboard if already logged in"""
     if request.session.get("user_id"):
         return RedirectResponse(url="/dashboard", status_code=303)
-    return templates.TemplateResponse(request, "login.html", {"title": "Login"})
+    return templates.TemplateResponse(request, "login.html", {"title": "Login", "email_configured": settings.email_configured, "signup_enabled": settings.allow_signup})
 
 
 @app.get("/signup", response_class=HTMLResponse)
 async def signup_page(request: Request):
-    """Signup page - redirects to dashboard if already logged in"""
+    """Signup page - redirects to dashboard if already logged in, or 404 when signup is disabled"""
+    if not settings.allow_signup:
+        return templates.TemplateResponse(request, "login.html", {
+            "title": "Login",
+            "email_configured": settings.email_configured,
+            "error": "Registration is not available.",
+        }, status_code=404)
     if request.session.get("user_id"):
         return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(request, "signup.html", {"title": "Sign Up"})

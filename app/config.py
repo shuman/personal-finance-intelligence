@@ -113,6 +113,9 @@ class Settings(BaseSettings):
     )
     google_oauth_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
 
+    # Signup / Registration
+    allow_signup: bool = True  # Set ALLOW_SIGNUP=false to disable public registration
+
     # SMTP Email Configuration (for password reset)
     smtp_host: Optional[str] = None
     smtp_port: int = 587
@@ -128,6 +131,11 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
+
+    @property
+    def email_configured(self) -> bool:
+        """Returns True only when SMTP is fully configured for sending emails."""
+        return bool(self.smtp_host and self.smtp_username and self.smtp_password)
 
     @property
     def max_file_size_bytes(self) -> int:

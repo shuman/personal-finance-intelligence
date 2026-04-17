@@ -52,11 +52,13 @@
                     </label>
                 </div>
 
+                {% if email_configured %}
                 <div class="text-sm">
                     <a href="/forgot-password" class="font-medium text-indigo-600 hover:text-indigo-500">
                         Forgot password?
                     </a>
                 </div>
+                {% endif %}
             </div>
 
             <div>
@@ -95,6 +97,7 @@
         </div>
 
         <!-- Signup Link -->
+        {% if signup_enabled %}
         <div class="text-center">
             <p class="text-sm text-gray-600">
                 Don't have an account?
@@ -103,6 +106,7 @@
                 </a>
             </p>
         </div>
+        {% endif %}
     </div>
 </div>
 
