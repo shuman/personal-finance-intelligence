@@ -72,6 +72,21 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "sqlite+aiosqlite:///./statements.db"
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def enforce_async_postgres_driver(cls, value):
+        """Rewrite plain postgresql:// URLs to use the asyncpg driver.
+
+        Railway (and many other platforms) set DATABASE_URL with the standard
+        ``postgresql://`` scheme, which SQLAlchemy maps to the synchronous
+        psycopg2 driver.  create_async_engine requires an async-compatible
+        driver, so we transparently upgrade the scheme to
+        ``postgresql+asyncpg://`` before the value is stored.
+        """
+        if isinstance(value, str) and value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return value
+
     # File Upload
     upload_dir: str = "./static/uploads"
     max_file_size_mb: int = 10
