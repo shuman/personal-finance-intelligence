@@ -286,6 +286,30 @@ async def reset_password_page(request: Request):
     return templates.TemplateResponse(request, "reset_password.html", {"title": "Reset Password"})
 
 
+@app.get("/privacy", response_class=HTMLResponse)
+async def privacy_page(request: Request):
+    """Privacy Policy page (public)"""
+    return templates.TemplateResponse(request, "privacy.html", {"title": "Privacy Policy"})
+
+
+@app.get("/terms", response_class=HTMLResponse)
+async def terms_page(request: Request):
+    """Terms of Service page (public)"""
+    return templates.TemplateResponse(request, "terms.html", {"title": "Terms of Service"})
+
+
+@app.get("/consent", response_class=HTMLResponse)
+async def consent_page(request: Request, db: AsyncSession = Depends(get_db)):
+    """Consent page for Google OAuth users who haven't accepted terms"""
+    user = await require_login(request, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    # Already consented — redirect to dashboard
+    if user.terms_accepted_at and user.privacy_accepted_at:
+        return RedirectResponse(url="/dashboard", status_code=303)
+    return templates.TemplateResponse(request, "consent.html", {"title": "Accept Terms", "user": user})
+
+
 # Landing page (public)
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request, db: AsyncSession = Depends(get_db)):

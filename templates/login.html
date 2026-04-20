@@ -181,8 +181,12 @@ function handleGoogleCallback(response) {
     .then(res => res.json())
     .then(data => {
         if (data.access_token) {
-            // Success - redirect to dashboard
-            window.location.href = '/dashboard';
+            // Check if user needs to accept terms
+            if (data.needs_consent) {
+                window.location.href = '/consent';
+            } else {
+                window.location.href = '/dashboard';
+            }
         } else {
             throw new Error(data.detail || 'Google login failed');
         }

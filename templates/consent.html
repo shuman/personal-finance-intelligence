@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Accept Terms{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center px-4">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Header -->
+        <div class="text-center">
+            <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg mb-4">
+                <i class="fas fa-shield-alt text-white text-2xl"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-900">Welcome to Kipta</h2>
+            <p class="mt-2 text-sm text-gray-600">Before continuing, please review and accept our policies.</p>
+        </div>
+
+        <!-- Error message -->
+        <div id="error-message" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            <span id="error-text"></span>
+        </div>
+
+        <!-- Consent Form -->
+        <form id="consent-form" class="mt-8 space-y-6">
+            <div class="space-y-4">
+                <div class="flex items-start gap-3 bg-white border border-gray-200 rounded-lg p-4">
+                    <input type="checkbox" id="accept-terms" class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer shrink-0">
+                    <label for="accept-terms" class="text-sm text-gray-700 cursor-pointer">
+                        I agree to the <a href="/terms" target="_blank" class="text-indigo-600 hover:underline font-medium">Terms of Service</a>
+                    </label>
+                </div>
+                <div class="flex items-start gap-3 bg-white border border-gray-200 rounded-lg p-4">
+                    <input type="checkbox" id="accept-privacy" class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer shrink-0">
+                    <label for="accept-privacy" class="text-sm text-gray-700 cursor-pointer">
+                        I agree to the <a href="/privacy" target="_blank" class="text-indigo-600 hover:underline font-medium">Privacy Policy</a>, including the use of Claude AI for processing my financial documents
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" id="consent-btn"
+                    class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
+                    <span id="consent-btn-text">Continue</span>
+                    <span id="consent-btn-spinner" class="hidden ml-2">
+                        <i class="fas fa-circle-notch fa-spin"></i>
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.getElementById('consent-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const acceptTerms = document.getElementById('accept-terms').checked;
+    const acceptPrivacy = document.getElementById('accept-privacy').checked;
+    const consentBtn = document.getElementById('consent-btn');
+    const consentBtnText = document.getElementById('consent-btn-text');
+    const consentBtnSpinner = document.getElementById('consent-btn-spinner');
+    const errorMessage = document.getElementById('error-message');
+    const errorText = document.getElementById('error-text');
+
+    errorMessage.classList.add('hidden');
+
+    if (!acceptTerms || !acceptPrivacy) {
+        errorText.textContent = 'You must accept both the Terms of Service and Privacy Policy.';
+        errorMessage.classList.remove('hidden');
+        return;
+    }
+
+    // Show loading state
+    consentBtn.disabled = true;
+    consentBtnText.textContent = 'Saving...';
+    consentBtnSpinner.classList.remove('hidden');
+
+    try {
+        const response = await fetch('/api/auth/consent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                accept_terms: acceptTerms,
+                accept_privacy: acceptPrivacy
+            }),
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            window.location.href = '/dashboard';
+        } else {
+            errorText.textContent = data.detail || 'Failed to record consent.';
+            errorMessage.classList.remove('hidden');
+        }
+    } catch (error) {
+        errorText.textContent = 'Network error. Please try again.';
+        errorMessage.classList.remove('hidden');
+    } finally {
+        consentBtn.disabled = false;
+        consentBtnText.textContent = 'Continue';
+        consentBtnSpinner.classList.add('hidden');
+    }
+});
+</script>
+{% endblock %}

@@ -43,6 +43,11 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
     last_login: Mapped[Optional[datetime]] = mapped_column(DateTime)
 
+    # Consent tracking
+    terms_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    privacy_accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    ai_consent_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+
     # Relationships (all user-owned data)
     financial_institutions: Mapped[List["FinancialInstitution"]] = relationship("FinancialInstitution", back_populates="user", cascade="all, delete-orphan")
     accounts: Mapped[List["Account"]] = relationship("Account", back_populates="user", cascade="all, delete-orphan")

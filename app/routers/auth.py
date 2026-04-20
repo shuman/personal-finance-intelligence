@@ -31,6 +31,7 @@ class Token(BaseModel):
     token_type: str
     user_email: str
     user_id: int
+    needs_consent: bool = False
 
 
 class LoginRequest(BaseModel):
@@ -54,6 +55,8 @@ class SignupRequest(BaseModel):
     email: EmailStr
     password: constr(min_length=8)
     full_name: Optional[str] = None
+    terms_accepted: bool = False
+    privacy_accepted: bool = False
 
 
 class GoogleLoginRequest(BaseModel):
@@ -77,6 +80,12 @@ class SessionResponse(BaseModel):
     authenticated: bool
     user_email: Optional[str] = None
     user_id: Optional[int] = None
+
+
+class ConsentRequest(BaseModel):
+    """Consent acceptance request"""
+    accept_terms: bool
+    accept_privacy: bool
 
 
 # ---- Helper Functions ----
@@ -325,6 +334,13 @@ async def signup(
             detail="Registration is disabled."
         )
 
+    # Validate consent checkboxes
+    if not signup_data.terms_accepted or not signup_data.privacy_accepted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You must accept the Terms of Service and Privacy Policy to create an account."
+        )
+
     # Check if user already exists
     existing_user = await get_user_by_email(db, signup_data.email)
     if existing_user:
@@ -332,6 +348,8 @@ async def signup(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
+
+    now = datetime.utcnow()
 
     # Create new user
     new_user = User(
@@ -341,7 +359,10 @@ async def signup(
         full_name=signup_data.full_name,
         is_active=True,
         is_admin=False,
-        last_login=datetime.utcnow()
+        last_login=now,
+        terms_accepted_at=now,
+        privacy_accepted_at=now,
+        ai_consent_at=now
     )
 
     db.add(new_user)
@@ -391,6 +412,9 @@ async def google_login(
             detail="Failed to create user account"
         )
 
+    # Check if user has accepted terms and privacy
+    needs_consent = not (user.terms_accepted_at and user.privacy_accepted_at)
+
     # Create JWT token
     access_token = create_access_token(data={"sub": user.email})
 
@@ -402,7 +426,8 @@ async def google_login(
         access_token=access_token,
         token_type="bearer",
         user_email=user.email,
-        user_id=user.id
+        user_id=user.id,
+        needs_consent=needs_consent
     )
 
 
@@ -500,3 +525,38 @@ async def check_session(
     return SessionResponse(
         authenticated=False
     )
+
+
+@router.post("/consent")
+async def record_consent(
+    request: Request,
+    consent_data: ConsentRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Record user consent for Terms of Service and Privacy Policy.
+    Requires an active session (for web interface, e.g. Google OAuth users).
+    """
+    user = await get_current_user_from_session(request, db)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+
+    if not consent_data.accept_terms or not consent_data.accept_privacy:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="You must accept both the Terms of Service and Privacy Policy."
+        )
+
+    now = datetime.utcnow()
+    if consent_data.accept_terms:
+        user.terms_accepted_at = now
+    if consent_data.accept_privacy:
+        user.privacy_accepted_at = now
+        user.ai_consent_at = now
+
+    await db.commit()
+
+    return {"message": "Consent recorded successfully"}

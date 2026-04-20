@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
+    <p class="text-sm text-gray-500 mb-8">Last updated: April 20, 2026</p>
+
+    <div class="prose prose-sm max-w-none text-gray-700 space-y-6">
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">1. Introduction</h2>
+            <p>Kipta ("we", "us", or "our") operates the website <strong>kipta.app</strong>. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service. By using Kipta, you agree to the collection and use of information in accordance with this policy.</p>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">2. Data We Collect</h2>
+            <p><strong>Account Information:</strong> Email address, full name, and authentication credentials (hashed passwords or Google OAuth tokens).</p>
+            <p><strong>Financial Documents:</strong> Bank statement PDFs that you upload for processing. These may contain transaction details, account numbers, balances, and merchant information.</p>
+            <p><strong>Derived Financial Data:</strong> Extracted transactions, categorized spending, account summaries, and AI-generated financial insights produced from your uploaded documents.</p>
+            <p><strong>Usage Data:</strong> Session cookies, login timestamps, and basic interaction patterns necessary to provide the service.</p>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">3. How We Use Data</h2>
+            <ul class="list-disc list-inside space-y-1">
+                <li>To provide the core statement parsing, transaction extraction, and financial analysis features.</li>
+                <li>To generate personalized financial insights and budgeting recommendations.</li>
+                <li>To authenticate you and maintain your account securely.</li>
+                <li>To improve the accuracy of our AI models and categorization rules.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">4. AI Processing (Claude API)</h2>
+            <p>When you upload a bank statement with AI extraction enabled, your PDF document is sent to <strong>Anthropic's Claude API</strong> for intelligent text extraction and analysis. Key points:</p>
+            <ul class="list-disc list-inside space-y-1">
+                <li>PDF content (including transaction details and account numbers) is transmitted to Anthropic's servers via encrypted HTTPS connections.</li>
+                <li>Anthropic processes this data solely to return extraction results to us. Per Anthropic's API terms, your data is not used to train their models.</li>
+                <li>You may disable AI extraction and use the local regex-based parser instead, which does not send data externally.</li>
+                <li>Extraction results may be cached on our servers to avoid redundant API calls.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">5. Third-Party Services</h2>
+            <p><strong>Anthropic (Claude API):</strong> AI-powered document extraction and financial analysis.</p>
+            <p><strong>Google OAuth:</strong> Optional sign-in/sign-up authentication.</p>
+            <p><strong>Cloud Hosting Provider:</strong> Application and database hosting with encrypted storage.</p>
+            <p>We do not sell, rent, or share your personal or financial data with any other third parties.</p>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">6. Data Storage &amp; Security</h2>
+            <p>Your data is stored in a secured database with the following protections:</p>
+            <ul class="list-disc list-inside space-y-1">
+                <li>All data is scoped per-user (multi-tenant isolation). You can only access your own data.</li>
+                <li>Passwords are hashed using industry-standard algorithms and never stored in plain text.</li>
+                <li>All connections are encrypted via HTTPS/TLS.</li>
+                <li>Security headers (HSTS, X-Frame-Options, CSP) are enforced on all responses.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">7. Data Retention</h2>
+            <p>We retain your account and financial data for as long as your account is active. You may request deletion of your account and all associated data at any time by contacting us. Upon account deletion, all uploaded documents, extracted transactions, and personal information are permanently removed.</p>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">8. Cookies &amp; Sessions</h2>
+            <p>We use a single session cookie (<code class="bg-gray-100 px-1 rounded text-xs">pfi_session</code>) to maintain your login state. This cookie expires after 7 days. We do not use tracking cookies, advertising cookies, or third-party analytics.</p>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">9. Your Rights</h2>
+            <p>You have the right to:</p>
+            <ul class="list-disc list-inside space-y-1">
+                <li>Access all personal and financial data we hold about you.</li>
+                <li>Request correction of inaccurate data.</li>
+                <li>Request deletion of your account and all associated data.</li>
+                <li>Export your transaction data.</li>
+                <li>Withdraw consent for AI processing at any time (by disabling AI extraction).</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">10. Children's Privacy</h2>
+            <p>Kipta is not intended for use by individuals under the age of 18. We do not knowingly collect data from children.</p>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">11. Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last updated" date. Continued use of the service after changes constitutes acceptance of the updated policy.</p>
+        </section>
+
+        <section>
+            <h2 class="text-xl font-semibold text-gray-900 mb-2">12. Contact</h2>
+            <p>If you have questions about this Privacy Policy or wish to exercise your data rights, please contact us at <strong>support@kipta.app</strong>.</p>
+        </section>
+
+        <div class="border-t border-gray-200 pt-4 mt-8">
+            <p class="text-xs text-gray-400">This policy is governed by the laws of Bangladesh, including the Digital Security Act 2018 and the Information and Communication Technology Act 2006.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

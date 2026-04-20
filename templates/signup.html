@@ -61,6 +61,22 @@
                 </div>
             </div>
 
+            <!-- Consent checkboxes -->
+            <div class="space-y-3">
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" id="terms-check" class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer shrink-0">
+                    <label for="terms-check" class="text-xs text-gray-600 cursor-pointer">
+                        I agree to the <a href="/terms" target="_blank" class="text-indigo-600 hover:underline font-medium">Terms of Service</a>
+                    </label>
+                </div>
+                <div class="flex items-start gap-3">
+                    <input type="checkbox" id="privacy-check" class="mt-1 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded cursor-pointer shrink-0">
+                    <label for="privacy-check" class="text-xs text-gray-600 cursor-pointer">
+                        I agree to the <a href="/privacy" target="_blank" class="text-indigo-600 hover:underline font-medium">Privacy Policy</a>, including AI processing of my financial documents
+                    </label>
+                </div>
+            </div>
+
             <div>
                 <button type="submit" id="signup-btn"
                     class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors">
@@ -164,6 +180,15 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
         return;
     }
 
+    // Validate consent checkboxes
+    const termsCheck = document.getElementById('terms-check').checked;
+    const privacyCheck = document.getElementById('privacy-check').checked;
+    if (!termsCheck || !privacyCheck) {
+        errorText.textContent = 'You must accept the Terms of Service and Privacy Policy.';
+        errorMessage.classList.remove('hidden');
+        return;
+    }
+
     // Show loading state
     signupBtn.disabled = true;
     signupBtnText.textContent = 'Creating account...';
@@ -178,7 +203,9 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
             body: JSON.stringify({
                 email,
                 password,
-                full_name: fullName || null
+                full_name: fullName || null,
+                terms_accepted: termsCheck,
+                privacy_accepted: privacyCheck
             }),
         });
 
@@ -217,8 +244,12 @@ function handleGoogleCallback(response) {
     .then(res => res.json())
     .then(data => {
         if (data.access_token) {
-            // Success - redirect to dashboard
-            window.location.href = '/dashboard';
+            // Check if user needs to accept terms
+            if (data.needs_consent) {
+                window.location.href = '/consent';
+            } else {
+                window.location.href = '/dashboard';
+            }
         } else {
             throw new Error(data.detail || 'Google sign-up failed');
         }
