@@ -268,6 +268,7 @@ class StatementService:
         safe_meta = {k: v for k, v in metadata.items() if k not in _EXPLICIT_STATEMENT_FIELDS}
 
         statement = Statement(
+            uuid=str(uuid.uuid4()),
             filename=filename,
             pdf_hash=file_hash,
             file_path=file_path,
@@ -334,6 +335,7 @@ class StatementService:
                     await self.db.flush()
 
             statement = Statement(
+                uuid=str(uuid.uuid4()),
                 filename=filename,
                 pdf_hash=file_hash,
                 file_path=file_path,
