@@ -422,11 +422,15 @@ class DataNormalizer:
         "Purchase,chaldal,dhaka zila,bangladesh"  → "chaldal"
         "Purchase,netflix,united states"           → "netflix"
         "Payment received with thank"              → None (not a purchase)
+        "Trn. Br: 095 Debit Card Issuance Fees"   → "Debit Card Issuance Fees"
+        "Trn. Br: 789 462870******6111 ..."        → None (pure reference, no merchant)
         """
         if not description:
             return None
 
         lower = description.lower().strip()
+
+        # Standard comma-delimited formats (credit card statements)
         for prefix in (
             "purchase,",
             "merchandize return,",
@@ -439,6 +443,27 @@ class DataNormalizer:
                 # First comma-delimited segment = merchant name
                 segment = remainder.split(",")[0].strip()
                 return segment if segment else None
+
+        # Bangladeshi bank statement format: "Trn. Br: XXX [description] [reference numbers]"
+        trn_match = re.match(
+            r"Trn\.?\s*Br:?\s*\d{3}\s*(.*)",
+            description,
+            re.IGNORECASE,
+        )
+        if trn_match:
+            remainder = trn_match.group(1).strip()
+            # Remove masked card numbers (e.g. 462870******6111)
+            remainder = re.sub(r"\d{4,}\*{2,}\d{2,}", "", remainder)
+            # Remove long reference numbers (10+ digits)
+            remainder = re.sub(r"\b\d{10,}\b", "", remainder)
+            # Remove short numeric-only tokens (sequences of digits possibly with dots/commas)
+            remainder = re.sub(r"\b[\d,.]{6,}\b", "", remainder)
+            # Remove alphanumeric codes like UCBMP054
+            remainder = re.sub(r"\b[A-Z]{2,}\d{3,}\b", "", remainder)
+            remainder = remainder.strip(" -,")
+            if remainder and not remainder.replace(" ", "").isdigit():
+                return remainder
+            return None
 
         return None
 

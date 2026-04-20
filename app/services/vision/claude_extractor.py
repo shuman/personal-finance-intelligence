@@ -35,7 +35,7 @@ _PRICING = {
 }
 
 EXTRACTION_SYSTEM_PROMPT = """You are a precise financial statement data extractor.
-Your job is to extract all transaction and financial data from credit/debit card statement PDFs.
+Your job is to extract all transaction and financial data from bank statement PDFs (credit cards, debit cards, savings accounts, current accounts).
 
 RULES:
 1. Return ONLY valid JSON. No markdown, no explanations, no extra text — just the JSON.
@@ -47,6 +47,35 @@ RULES:
 6. For returns/credits, set is_credit=true.
 7. Dates: return as "YYYY-MM-DD" if possible, otherwise return as-is.
 8. Omit null fields to keep output compact and within token limits.
+
+CRITICAL AMOUNT PARSING RULES:
+9.  billing_amount and original_amount must be the ACTUAL monetary transaction amount only.
+    NEVER include account numbers, reference numbers, branch codes, or sequence numbers as amounts.
+10. For bank/debit statements: the Debit column = billing_amount (money spent),
+    the Credit column = billing_amount with is_credit=true (money received).
+    The Balance column is NOT the transaction amount — ignore it for billing_amount.
+11. If a transaction row contains mixed numbers (e.g. "Trn. Br: 789 462870******6111 UCBMP054 000868680108 10,000.00"),
+    the monetary amount is typically the LAST number that looks like a formatted currency value (with commas/decimals).
+    Account numbers, reference numbers, and branch codes are NOT amounts.
+12. Look for dedicated Debit/Credit/Amount columns in the statement table. Use those columns for the amount.
+
+INTELLIGENT MERCHANT NAME EXTRACTION:
+13. For bank statements with descriptions like "Trn. Br: 095 Debit Card Issuance Fees for the Card No462870******6111":
+    - merchant_name should be the meaningful part: "Debit Card Issuance Fees"
+    - Do NOT use branch codes ("Trn. Br: 095") as merchant names
+14. For ATM/POS transactions, extract the terminal/location name as merchant_name.
+15. For fund transfers, use the recipient/sender name or purpose as merchant_name.
+16. For descriptions that are purely numeric references with no readable name, set merchant_name to a descriptive label
+    based on transaction_type (e.g. "Fund Transfer", "ATM Withdrawal", "POS Purchase", "Online Transfer").
+
+TRANSACTION TYPE DETECTION:
+17. Classify transactions intelligently based on description:
+    - "ATM" or "cash withdrawal" → transaction_type: "cash_advance"
+    - "POS" or "purchase" → transaction_type: "purchase"
+    - "transfer", "NPSB", "BEFTN", "fund transfer" → transaction_type: "transfer"
+    - "fee", "charge", "issuance", "VAT" → transaction_type: "fee"
+    - "interest" → transaction_type: "interest"
+    - "salary", "deposit", credit entries → transaction_type: "deposit" with is_credit: true
 
 STATEMENT STRUCTURE HINT: {format_hint}
 
@@ -316,8 +345,13 @@ class ClaudeExtractor:
     def _get_format_hint(self) -> str:
         if not self.institution:
             return (
-                "Generic statement. Extract all transaction rows. "
-                "Card sections start with a card number header like '376948*****9844 HOLDER NAME'."
+                "Generic bank statement. Extract all transaction rows carefully. "
+                "Card sections start with a card number header like '376948*****9844 HOLDER NAME'. "
+                "For bank/debit account statements: look for Date, Description/Narration, Debit, Credit, Balance columns. "
+                "Use the Debit or Credit column as billing_amount (NOT the running Balance column). "
+                "Descriptions may contain branch codes (Trn. Br: XXX), account numbers, and reference numbers — "
+                "these are NOT amounts. The actual amount is in the dedicated Debit/Credit column. "
+                "Extract a meaningful merchant_name from the description — skip branch codes and reference numbers."
             )
         hints = {
             "city_bank_amex": (
@@ -335,7 +369,9 @@ class ClaudeExtractor:
         }
         return hints.get(
             self.institution.statement_format_hint,
-            f"Bank: {self.institution.name}. Default currency: {self.institution.default_currency}."
+            f"Bank: {self.institution.name}. Default currency: {self.institution.default_currency}. "
+            f"Look for dedicated Debit/Credit/Amount columns. Do NOT confuse reference numbers or account numbers with amounts. "
+            f"Extract meaningful merchant names from transaction descriptions."
         )
 
     def _build_message_content(self, pdf_bytes: bytes) -> list:

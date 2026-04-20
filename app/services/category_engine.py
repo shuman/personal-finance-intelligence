@@ -21,6 +21,7 @@ from decimal import Decimal
 from typing import Optional, Tuple, Dict, Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -665,7 +666,11 @@ Rules:
             )
             self.db.add(rule)
 
-        await self.db.flush()
+        try:
+            await self.db.flush()
+        except IntegrityError:
+            await self.db.rollback()
+            logger.debug(f"Skipped duplicate category rule for '{normalized}' (source={source})")
 
     async def _upsert_user_override_rule(
         self,
@@ -705,7 +710,11 @@ Rules:
             )
             self.db.add(rule)
 
-        await self.db.flush()
+        try:
+            await self.db.flush()
+        except IntegrityError:
+            await self.db.rollback()
+            logger.debug(f"Skipped duplicate user_override rule for '{normalized}'")
 
     def _normalize(self, text: str) -> str:
         """Normalize merchant name for rule matching."""
@@ -735,9 +744,19 @@ Rules:
             "Food & Dining": ["food", "restaurant", "cafe", "kitchen", "dining"],
             "Transport": ["cng", "fuel", "petrol", "uber", "pathao", "taxi"],
             "Health": ["pharma", "hospital", "clinic", "diagnostic", "medical"],
-            "Utilities": ["robi", "grameenphone", "banglalink", "electricity", "water"],
+            "Utilities": ["robi", "grameenphone", "banglalink", "electricity", "water", "desco", "wasa"],
             "Entertainment": ["netflix", "spotify", "youtube", "disney"],
             "Software & Tools": ["cursor", "github", "openai", "claude", "canva"],
+            "Fees & Charges": [
+                "annual fee", "late fee", "vat on", "finance charge",
+                "issuance fee", "card fee", "service charge", "debit card fee",
+                "sms charge", "excise duty", "stamp duty",
+            ],
+            "Financial Services": [
+                "fund transfer", "atm withdrawal", "atm", "npsb", "beftn", "rtgs",
+                "online transfer", "transfer", "bkash", "nagad", "rocket",
+                "mobile banking", "internet banking",
+            ],
         }
         for category, patterns in keywords.items():
             if any(p in normalized for p in patterns):

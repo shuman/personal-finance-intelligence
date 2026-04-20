@@ -46,6 +46,18 @@ class ExtractedTransaction(BaseModel):
             "cash_advance": "cash_advance",
             "adjustment": "adjustment",
             "vat": "fee",
+            "transfer": "transfer",
+            "fund transfer": "transfer",
+            "deposit": "deposit",
+            "salary": "deposit",
+            "atm withdrawal": "cash_advance",
+            "atm": "cash_advance",
+            "pos purchase": "purchase",
+            "pos": "purchase",
+            "online transfer": "transfer",
+            "npsb": "transfer",
+            "beftn": "transfer",
+            "rtgs": "transfer",
         }
         return mapping.get(v, v)
 
