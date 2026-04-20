@@ -168,8 +168,9 @@ async def preview_statement(
             try:
                 institution = await service._detect_institution(working_file, bank_name)
                 parsed_data = await service._extract_with_claude_vision(
-                    working_file,
-                    institution,
+                    user_id=current_user.id,
+                    pdf_path=working_file,
+                    institution=institution,
                     file_hash=file_hash,
                     model=extraction_model,
                     use_extraction_cache=use_extraction_cache,
@@ -230,7 +231,7 @@ async def preview_statement(
         total_transactions = len(txn_list)
 
         logger.info(f"Starting batch categorization for {total_transactions} transactions")
-        await engine.batch_categorize(txn_list)
+        await engine.batch_categorize(txn_list, user_id=current_user.id)
         logger.info(f"Batch categorization complete for {total_transactions} transactions")
 
         # ------------------------------------------------------------------
