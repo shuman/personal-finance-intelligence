@@ -15,7 +15,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Dict, List, Any, Optional, Tuple
 
-from sqlalchemy import select, delete as sa_delete
+from sqlalchemy import select, delete as sa_delete, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 
@@ -197,9 +197,14 @@ class StatementService:
                 f"Re-upload detected (statement id={old_statement_id}), "
                 "soft-deleting old data (unique fields renamed)…"
             )
-            # Rename unique fields so the new statement can be inserted
-            existing.filename = f"__deleted__{existing.id}__{existing.filename}"
-            existing.pdf_hash = f"__deleted__{existing.id}__{existing.pdf_hash}"
+            # Rename unique fields so the new statement can be inserted.
+            # Guard against double-prefixing if a previous attempt already
+            # soft-deleted this record but the session was later rolled back
+            # and the rename was left committed.
+            if not existing.filename.startswith("__deleted__"):
+                existing.filename = f"__deleted__{existing.id}__{existing.filename}"
+            if not existing.pdf_hash.startswith("__deleted__"):
+                existing.pdf_hash = f"__deleted__{existing.id}__{existing.pdf_hash}"
             await self.db.flush()
 
         temp_path = data.get("temp_path")
@@ -997,19 +1002,27 @@ class StatementService:
             )
 
     async def _check_duplicate_filename(self, filename: str, user_id: int) -> Optional[Statement]:
+        """Find a statement by filename, including soft-deleted variants."""
         result = await self.db.execute(
             select(Statement).where(
-                Statement.filename == filename,
-                Statement.user_id == user_id
+                or_(
+                    Statement.filename == filename,
+                    Statement.filename.like(f"%__{filename}"),
+                ),
+                Statement.user_id == user_id,
             )
         )
         return result.scalar_one_or_none()
 
     async def _check_duplicate_hash(self, file_hash: str, user_id: int) -> Optional[Statement]:
+        """Find a statement by pdf hash, including soft-deleted variants."""
         result = await self.db.execute(
             select(Statement).where(
-                Statement.pdf_hash == file_hash,
-                Statement.user_id == user_id
+                or_(
+                    Statement.pdf_hash == file_hash,
+                    Statement.pdf_hash.like(f"%__{file_hash}"),
+                ),
+                Statement.user_id == user_id,
             )
         )
         return result.scalar_one_or_none()
