@@ -219,7 +219,7 @@ class CategoryRule(Base):
 
     __table_args__ = (
         Index("idx_category_rule_merchant", "normalized_merchant"),
-        UniqueConstraint("normalized_merchant", "source", name="uq_rule_merchant_source"),
+        UniqueConstraint("normalized_merchant", "source", "user_id", name="uq_rule_merchant_source_user"),
     )
 
     def __repr__(self):
