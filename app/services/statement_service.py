@@ -217,6 +217,18 @@ class StatementService:
                 except Exception:
                     metadata[key] = None
 
+        # Convert integer strings to int
+        integer_fields = [
+            "member_since", "billing_cycle",
+            "rewards_opening", "rewards_earned", "rewards_redeemed", "rewards_closing",
+        ]
+        for field in integer_fields:
+            if metadata.get(field) is not None:
+                try:
+                    metadata[field] = int(float(str(metadata[field]).replace(',', '')))
+                except Exception:
+                    metadata[field] = None
+
         # Convert numeric strings to Decimal
         numeric_fields = [
             "previous_balance", "payments_credits", "purchases", "cash_advances",
