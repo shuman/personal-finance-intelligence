@@ -730,9 +730,9 @@ class StatementService:
         safe_meta = {k: v for k, v in metadata.items() if k not in _EXPLICIT}
 
         # Re-upload support: soft-delete old statement first
-        existing = await self._check_duplicate_hash(file_hash)
+        existing = await self._check_duplicate_hash(file_hash, user_id)
         if not existing:
-            existing = await self._check_duplicate_filename(filename)
+            existing = await self._check_duplicate_filename(filename, user_id)
 
         old_statement_id = None
         if existing:
@@ -741,8 +741,10 @@ class StatementService:
                 f"Re-upload detected in direct path (statement id={old_statement_id}), "
                 "soft-deleting old data…"
             )
-            existing.filename = f"__deleted__{existing.id}__{existing.filename}"
-            existing.pdf_hash = f"__deleted__{existing.id}__{existing.pdf_hash}"
+            if not existing.filename.startswith("__deleted__"):
+                existing.filename = f"__deleted__{existing.id}__{existing.filename}"
+            if not existing.pdf_hash.startswith("__deleted__"):
+                existing.pdf_hash = f"__deleted__{existing.id}__{existing.pdf_hash}"
             await self.db.flush()
 
         statement = Statement(
@@ -1001,31 +1003,49 @@ class StatementService:
                 "These dates must be present in the PDF."
             )
 
-    async def _check_duplicate_filename(self, filename: str, user_id: int) -> Optional[Statement]:
-        """Find a statement by filename, including soft-deleted variants."""
-        result = await self.db.execute(
-            select(Statement).where(
-                or_(
-                    Statement.filename == filename,
-                    Statement.filename.like(f"%__{filename}"),
-                ),
-                Statement.user_id == user_id,
-            )
-        )
-        return result.scalar_one_or_none()
+    async def _check_duplicate_filename(self, filename: str, user_id: int = None) -> Optional[Statement]:
+        """Find a statement by filename, including soft-deleted variants.
 
-    async def _check_duplicate_hash(self, file_hash: str, user_id: int) -> Optional[Statement]:
-        """Find a statement by pdf hash, including soft-deleted variants."""
-        result = await self.db.execute(
-            select(Statement).where(
-                or_(
-                    Statement.pdf_hash == file_hash,
-                    Statement.pdf_hash.like(f"%__{file_hash}"),
-                ),
-                Statement.user_id == user_id,
-            )
+        Searches globally (unique constraint is global) but prefers the
+        current user's record when multiple matches exist.
+        """
+        conditions = or_(
+            Statement.filename == filename,
+            Statement.filename.like(f"__deleted__%\\_\\_{filename}"),
         )
-        return result.scalar_one_or_none()
+        result = await self.db.execute(
+            select(Statement).where(conditions)
+        )
+        rows = result.scalars().all()
+        if not rows:
+            return None
+        # Prefer the current user's record
+        for r in rows:
+            if r.user_id == user_id:
+                return r
+        return rows[0]
+
+    async def _check_duplicate_hash(self, file_hash: str, user_id: int = None) -> Optional[Statement]:
+        """Find a statement by pdf hash, including soft-deleted variants.
+
+        Searches globally (unique constraint is global) but prefers the
+        current user's record when multiple matches exist.
+        """
+        conditions = or_(
+            Statement.pdf_hash == file_hash,
+            Statement.pdf_hash.like(f"__deleted__%\\_\\_{file_hash}"),
+        )
+        result = await self.db.execute(
+            select(Statement).where(conditions)
+        )
+        rows = result.scalars().all()
+        if not rows:
+            return None
+        # Prefer the current user's record
+        for r in rows:
+            if r.user_id == user_id:
+                return r
+        return rows[0]
 
     # ------------------------------------------------------------------
     # Read methods (unchanged)
