@@ -83,16 +83,8 @@ class StatementService:
         """
         file_hash = hashlib.sha256(file_content).hexdigest()
 
-        existing = await self._check_duplicate_filename(filename, user_id)
-        if existing:
-            raise ValueError(
-                f"Statement with filename '{filename}' already exists (ID: {existing.id})"
-            )
-        existing = await self._check_duplicate_hash(file_hash, user_id)
-        if existing:
-            raise ValueError(
-                f"Identical statement file already uploaded (ID: {existing.id})"
-            )
+        # Note: duplicate detection is handled by _store_parsed_data which
+        # updates existing statements in-place on re-upload.
 
         file_path = os.path.join(self.upload_dir, filename)
         with open(file_path, "wb") as f:
@@ -172,6 +164,9 @@ class StatementService:
         """
         Save previewed and edited statement data to database.
         Expects the edited data from the preview endpoint.
+
+        Re-uploads update the existing statement in-place (delete old children,
+        update metadata, insert new transactions).
         """
         from datetime import date as dt_date, datetime as dt
 
@@ -184,28 +179,12 @@ class StatementService:
         fees = data.get("fees", [])
         account_id = data.get("account_id")
 
-        # Re-upload support: soft-delete old statement first, permanently
-        # delete only after the new data has been committed successfully.
+        # Check for existing statement (re-upload case)
         existing = await self._check_duplicate_hash(file_hash, user_id)
         if not existing:
             existing = await self._check_duplicate_filename(filename, user_id)
 
-        old_statement_id = None
-        if existing:
-            old_statement_id = existing.id
-            logger.info(
-                f"Re-upload detected (statement id={old_statement_id}), "
-                "soft-deleting old data (unique fields renamed)…"
-            )
-            # Rename unique fields so the new statement can be inserted.
-            # Guard against double-prefixing if a previous attempt already
-            # soft-deleted this record but the session was later rolled back
-            # and the rename was left committed.
-            if not existing.filename.startswith("__deleted__"):
-                existing.filename = f"__deleted__{existing.id}__{existing.filename}"
-            if not existing.pdf_hash.startswith("__deleted__"):
-                existing.pdf_hash = f"__deleted__{existing.id}__{existing.pdf_hash}"
-            await self.db.flush()
+        is_reupload = existing is not None
 
         temp_path = data.get("temp_path")
         if temp_path and os.path.exists(temp_path):
@@ -272,73 +251,35 @@ class StatementService:
         _EXPLICIT_STATEMENT_FIELDS = {"bank_name", "account_id", "extraction_method", "ai_confidence"}
         safe_meta = {k: v for k, v in metadata.items() if k not in _EXPLICIT_STATEMENT_FIELDS}
 
-        statement = Statement(
-            uuid=str(uuid.uuid4()),
-            filename=filename,
-            pdf_hash=file_hash,
-            file_path=file_path,
-            password=password,
-            bank_name=effective_bank_name,
-            card_type=card_type,
-            account_id=account_id,
-            extraction_method=data.get("extraction_method", "regex_fallback"),
-            user_id=user_id,
-            **safe_meta,
-        )
-        self.db.add(statement)
-        await self.db.flush()
-
-        transactions_added = 0
-        transactions_skipped = 0
-        duplicate_transactions = []
-        successfully_added_transactions = []
-
-        for txn_data in transactions:
-            if txn_data.get("transaction_date"):
-                txn_data["transaction_date"] = dt.fromisoformat(txn_data["transaction_date"]).date()
-            if txn_data.get("posting_date"):
-                txn_data["posting_date"] = dt.fromisoformat(txn_data["posting_date"]).date()
-            for field in ["amount", "billing_amount", "original_amount", "foreign_amount", "exchange_rate", "fx_rate_applied"]:
-                if txn_data.get(field) is not None:
-                    try:
-                        txn_data[field] = Decimal(str(txn_data[field]))
-                    except Exception:
-                        txn_data[field] = None
-
-        for txn_data in transactions:
-            # Use per-transaction account_id/account_number from card sections
-            txn_account_id = txn_data.get("account_id") or account_id
-            txn_account_number = txn_data.get("account_number") or statement.account_number
-            txn_fields = {k: v for k, v in txn_data.items() if k not in ("account_number", "statement_id", "account_id")}
-            transaction = Transaction(
-                statement_id=statement.id,
-                account_number=txn_account_number,
-                account_id=txn_account_id,
-                user_id=user_id,
-                **txn_fields,
+        if is_reupload:
+            # Re-upload: update existing statement in-place
+            statement = existing
+            logger.info(
+                f"Re-upload detected (statement id={statement.id}), "
+                "updating existing data in-place…"
             )
-            self.db.add(transaction)
-            transactions_added += 1
-            successfully_added_transactions.append(txn_data)
 
-        try:
+            # Delete old child records (transactions, fees, etc.)
+            for model in (CategorySummary, RewardsSummary, Payment,
+                          InterestCharge, Fee, Transaction):
+                await self.db.execute(sa_delete(model).where(model.statement_id == statement.id))
             await self.db.flush()
-        except IntegrityError:
-            await self.db.rollback()
-            transactions_added = 0
-            successfully_added_transactions = []
 
-            # Re-apply soft delete after rollback (rollback restored old unique fields)
-            if old_statement_id:
-                old_stmt = await self.db.execute(
-                    select(Statement).where(Statement.id == old_statement_id)
-                )
-                old_stmt_obj = old_stmt.scalar_one_or_none()
-                if old_stmt_obj:
-                    old_stmt_obj.filename = f"__deleted__{old_statement_id}__{old_stmt_obj.filename}"
-                    old_stmt_obj.pdf_hash = f"__deleted__{old_statement_id}__{old_stmt_obj.pdf_hash}"
-                    await self.db.flush()
-
+            # Update statement fields
+            statement.filename = filename
+            statement.pdf_hash = file_hash
+            statement.file_path = file_path
+            statement.password = password
+            statement.bank_name = effective_bank_name
+            statement.card_type = card_type
+            statement.account_id = account_id
+            statement.extraction_method = data.get("extraction_method", "regex_fallback")
+            for key, value in safe_meta.items():
+                if hasattr(statement, key):
+                    setattr(statement, key, value)
+            await self.db.flush()
+        else:
+            # New upload: create fresh statement
             statement = Statement(
                 uuid=str(uuid.uuid4()),
                 filename=filename,
@@ -355,23 +296,47 @@ class StatementService:
             self.db.add(statement)
             await self.db.flush()
 
-            for idx, txn_data in enumerate(transactions, 1):
-                try:
-                    txn_account_id = txn_data.get("account_id") or account_id
-                    txn_account_number = txn_data.get("account_number") or statement.account_number
-                    txn_fields = {k: v for k, v in txn_data.items() if k not in ("account_number", "statement_id", "account_id")}
-                    transaction = Transaction(
-                        statement_id=statement.id,
-                        account_number=txn_account_number,
-                        account_id=txn_account_id,
-                        user_id=user_id,
-                        **txn_fields,
-                    )
+        # Prepare transaction data
+        for txn_data in transactions:
+            if txn_data.get("transaction_date"):
+                txn_data["transaction_date"] = dt.fromisoformat(txn_data["transaction_date"]).date()
+            if txn_data.get("posting_date"):
+                txn_data["posting_date"] = dt.fromisoformat(txn_data["posting_date"]).date()
+            for field in ["amount", "billing_amount", "original_amount", "foreign_amount", "exchange_rate", "fx_rate_applied"]:
+                if txn_data.get(field) is not None:
+                    try:
+                        txn_data[field] = Decimal(str(txn_data[field]))
+                    except Exception:
+                        txn_data[field] = None
+
+        # Insert transactions using savepoints for safe individual error handling
+        transactions_added = 0
+        transactions_skipped = 0
+        duplicate_transactions = []
+        successfully_added_transactions = []
+
+        for idx, txn_data in enumerate(transactions, 1):
+            txn_account_id = txn_data.get("account_id") or account_id
+            txn_account_number = txn_data.get("account_number") or statement.account_number
+            txn_fields = {k: v for k, v in txn_data.items() if k not in ("account_number", "statement_id", "account_id")}
+            transaction = Transaction(
+                statement_id=statement.id,
+                account_number=txn_account_number,
+                account_id=txn_account_id,
+                user_id=user_id,
+                **txn_fields,
+            )
+
+            # Use a savepoint so a single transaction failure doesn't
+            # roll back the entire transaction (statement + other txns).
+            try:
+                async with self.db.begin_nested():
                     self.db.add(transaction)
                     await self.db.flush()
-                    transactions_added += 1
-                    successfully_added_transactions.append(txn_data)
-                except IntegrityError:
+            except IntegrityError as ie:
+                err_msg = str(ie.orig) if hasattr(ie, 'orig') else str(ie)
+                # Only skip genuine UNIQUE constraint violations (duplicates)
+                if "uq_transaction_duplicate" in err_msg or "UNIQUE constraint" in err_msg:
                     transactions_skipped += 1
                     txn_date = txn_data.get("transaction_date")
                     duplicate_transactions.append({
@@ -380,9 +345,14 @@ class StatementService:
                         "description": str(txn_data.get("description_raw", ""))[:50],
                         "amount": float(txn_data.get("amount", 0) or 0),
                     })
-                    await self.db.rollback()
-                    await self.db.flush()
+                else:
+                    # NOT NULL / FK / other constraint — real error, propagate
+                    raise
+            else:
+                transactions_added += 1
+                successfully_added_transactions.append(txn_data)
 
+        # Store fees
         if fees:
             for fee_data in fees:
                 if fee_data.get("amount"):
@@ -396,35 +366,13 @@ class StatementService:
                 )
                 self.db.add(fee)
 
-        if transactions_skipped > 0 and transactions_added == 0:
-            await self.db.rollback()
-            raise ValueError(
-                f"All {len(transactions)} transactions are duplicates. "
-                "This file may have already been uploaded."
-            )
-
         try:
-            await self._store_category_summaries(statement, successfully_added_transactions)
+            await self._store_category_summaries(user_id, statement, successfully_added_transactions)
         except Exception as e:
             await self.db.rollback()
             raise ValueError(f"Error creating category summaries: {str(e)}")
 
         await self.db.commit()
-
-        # Permanently delete the old (soft-deleted) statement now that new data is committed
-        if old_statement_id:
-            try:
-                old_stmt = await self.db.execute(
-                    select(Statement).where(Statement.id == old_statement_id)
-                )
-                old_stmt_obj = old_stmt.scalar_one_or_none()
-                if old_stmt_obj:
-                    await self._delete_statement_cascade(old_stmt_obj)
-                    await self.db.commit()
-                    logger.info(f"Permanently deleted old statement id={old_statement_id}")
-            except Exception as e:
-                logger.warning(f"Failed to clean up old statement id={old_statement_id}: {e}")
-                # Non-fatal — new data is already saved
 
         result = {
             "statement_id": statement.id,
@@ -434,7 +382,7 @@ class StatementService:
             "transactions_skipped": transactions_skipped,
             "statement_date": statement.statement_date.isoformat() if statement.statement_date else None,
             "total_amount": float(statement.total_amount_due) if statement.total_amount_due else None,
-            "message": "Statement saved successfully",
+            "message": "Statement updated successfully" if is_reupload else "Statement saved successfully",
         }
         if transactions_skipped > 0:
             result["warning"] = f"{transactions_skipped} duplicate transaction(s) skipped."
@@ -729,40 +677,57 @@ class StatementService:
         _EXPLICIT = {"bank_name", "account_id", "extraction_method", "ai_confidence"}
         safe_meta = {k: v for k, v in metadata.items() if k not in _EXPLICIT}
 
-        # Re-upload support: soft-delete old statement first
+        # Re-upload support: update existing statement in-place
         existing = await self._check_duplicate_hash(file_hash, user_id)
         if not existing:
             existing = await self._check_duplicate_filename(filename, user_id)
 
-        old_statement_id = None
-        if existing:
-            old_statement_id = existing.id
+        is_reupload = existing is not None
+
+        if is_reupload:
+            statement = existing
             logger.info(
-                f"Re-upload detected in direct path (statement id={old_statement_id}), "
-                "soft-deleting old data…"
+                f"Re-upload detected in direct path (statement id={statement.id}), "
+                "updating existing data in-place…"
             )
-            if not existing.filename.startswith("__deleted__"):
-                existing.filename = f"__deleted__{existing.id}__{existing.filename}"
-            if not existing.pdf_hash.startswith("__deleted__"):
-                existing.pdf_hash = f"__deleted__{existing.id}__{existing.pdf_hash}"
+
+            # Delete old child records
+            for model in (CategorySummary, RewardsSummary, Payment,
+                          InterestCharge, Fee, Transaction):
+                await self.db.execute(sa_delete(model).where(model.statement_id == statement.id))
             await self.db.flush()
 
-        statement = Statement(
-            uuid=str(uuid.uuid4()),
-            user_id=user_id,
-            filename=filename,
-            pdf_hash=file_hash,
-            file_path=file_path,
-            password=password,
-            bank_name=effective_bank_name,
-            card_type=card_type,
-            account_id=account_id,
-            extraction_method=extraction_method,
-            ai_confidence=parsed_data.get("ai_confidence"),
-            **safe_meta,
-        )
-        self.db.add(statement)
-        await self.db.flush()
+            # Update statement fields
+            statement.filename = filename
+            statement.pdf_hash = file_hash
+            statement.file_path = file_path
+            statement.password = password
+            statement.bank_name = effective_bank_name
+            statement.card_type = card_type
+            statement.account_id = account_id
+            statement.extraction_method = extraction_method
+            statement.ai_confidence = parsed_data.get("ai_confidence")
+            for key, value in safe_meta.items():
+                if hasattr(statement, key):
+                    setattr(statement, key, value)
+            await self.db.flush()
+        else:
+            statement = Statement(
+                uuid=str(uuid.uuid4()),
+                user_id=user_id,
+                filename=filename,
+                pdf_hash=file_hash,
+                file_path=file_path,
+                password=password,
+                bank_name=effective_bank_name,
+                card_type=card_type,
+                account_id=account_id,
+                extraction_method=extraction_method,
+                ai_confidence=parsed_data.get("ai_confidence"),
+                **safe_meta,
+            )
+            self.db.add(statement)
+            await self.db.flush()
 
         transactions_added = 0
         successfully_added = []
@@ -854,20 +819,6 @@ class StatementService:
             self.db.add(rewards)
 
         await self.db.commit()
-
-        # Permanently delete the old (soft-deleted) statement now that new data is committed
-        if old_statement_id:
-            try:
-                old_stmt = await self.db.execute(
-                    select(Statement).where(Statement.id == old_statement_id)
-                )
-                old_stmt_obj = old_stmt.scalar_one_or_none()
-                if old_stmt_obj:
-                    await self._delete_statement_cascade(old_stmt_obj)
-                    await self.db.commit()
-                    logger.info(f"Permanently deleted old statement id={old_statement_id} (direct path)")
-            except Exception as e:
-                logger.warning(f"Failed to clean up old statement id={old_statement_id}: {e}")
 
         stats = {
             "transactions_added": transactions_added,
