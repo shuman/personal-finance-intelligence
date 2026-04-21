@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.database import get_db
 from app.models import User
+from app.utils.db_errors import friendly_error
 from app.routers.auth import get_current_user
 from app.services import StatementService
 from app.config import settings
@@ -336,32 +337,24 @@ async def save_statement(
                 pass
         raise HTTPException(status_code=400, detail=str(e))
     except IntegrityError as e:
-        # Handle database constraint violations with detailed error
-        error_msg = str(e.orig) if hasattr(e, 'orig') else str(e)
-        # Extract the field name from NOT NULL constraint error
-        if "NOT NULL constraint failed:" in error_msg:
-            field = error_msg.split("NOT NULL constraint failed:")[-1].strip()
-            raise HTTPException(
-                status_code=400,
-                detail=f"Required field is missing: {field}\n\nThis field must be present in the PDF or provided in the form."
-            )
-        elif "UNIQUE constraint failed: transactions" in error_msg:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Duplicate transactions detected. This file contains transactions with identical:\n"
-                    "  - Date\n"
-                    "  - Description\n"
-                    "  - Amount\n\n"
-                    "This usually means:\n"
-                    "  1. The same file was uploaded twice, OR\n"
-                    "  2. The statement has multiple identical transactions (rare)\n\n"
-                    "Check the statement list to see if this file was already processed."
-                )
-            )
-        raise HTTPException(status_code=400, detail=f"Database constraint error: {error_msg}")
+        # Handle database constraint violations with user-friendly messages
+        _allowed_temp = os.path.realpath(os.path.join(settings.upload_dir, "temp"))
+        temp_path = data.get("temp_path")
+        if temp_path:
+            temp_path = os.path.realpath(temp_path)
+            if not temp_path.startswith(_allowed_temp + os.sep):
+                temp_path = None
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+                decrypted_path = temp_path.replace('.pdf', '_decrypted.pdf')
+                if os.path.exists(decrypted_path):
+                    os.remove(decrypted_path)
+            except:
+                pass
+        raise HTTPException(status_code=400, detail=friendly_error(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error saving data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error saving data. Please try again.")
 
 
 @router.post("/upload")
@@ -426,5 +419,7 @@ async def upload_statement(
 
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    except IntegrityError as e:
+        raise HTTPException(status_code=400, detail=friendly_error(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing file. Please try again.")
