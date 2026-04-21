@@ -10,7 +10,8 @@
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
 
     <!-- SEO & PWA -->
-    <meta name="description" content="Kipta — AI-powered personal finance intelligence. Turn bank statements into insights, track spending, and get financial guidance.">
+    <meta name="description"
+        content="Kipta — AI-powered personal finance intelligence. Turn bank statements into insights, track spending, and get financial guidance.">
     <meta name="theme-color" content="#4f46e5">
     <link rel="manifest" href="/static/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192x192.svg">
@@ -22,7 +23,8 @@
 
     <!-- OpenGraph -->
     <meta property="og:title" content="{% block og_title %}{{ title|default('Home') }} — {{ app_name }}{% endblock %}">
-    <meta property="og:description" content="AI-powered personal finance intelligence. Turn your bank statements into structured data, clear insights, and financial guidance.">
+    <meta property="og:description"
+        content="AI-powered personal finance intelligence. Turn your bank statements into structured data, clear insights, and financial guidance.">
     <meta property="og:url" content="{{ site_url }}{{ request.url.path }}">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Kipta">
@@ -31,7 +33,8 @@
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{{ title|default('Home') }} — {{ app_name }}">
-    <meta name="twitter:description" content="AI-powered personal finance intelligence. Turn your bank statements into insights.">
+    <meta name="twitter:description"
+        content="AI-powered personal finance intelligence. Turn your bank statements into insights.">
     <meta name="twitter:image" content="{{ site_url }}/static/og-image.png">
 
     <!-- JSON-LD Structured Data -->
@@ -167,11 +170,6 @@
                 <!-- Desktop Navigation (authenticated users only) -->
                 {% if user %}
                 <nav class="hidden md:flex items-center gap-1">
-                    <a href="/dashboard" data-nav="/dashboard"
-                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
-                        <i class="fas fa-tachometer-alt text-xs nav-icon"></i>
-                        <span>Dashboard</span>
-                    </a>
                     <a href="/daily-expenses" data-nav="/daily-expenses"
                         class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-wallet text-xs nav-icon"></i>
@@ -191,6 +189,11 @@
                         class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
                         <i class="fas fa-hand-holding-usd text-xs nav-icon"></i>
                         <span>Income</span>
+                    </a>
+                    <a href="/dashboard" data-nav="/dashboard"
+                        class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
+                        <i class="fas fa-tachometer-alt text-xs nav-icon"></i>
+                        <span>Dashboard</span>
                     </a>
                     <a href="/reports" data-nav="/reports"
                         class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
@@ -216,7 +219,8 @@
                         class="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm hover:shadow-md transition-all">
                         <i class="fas fa-wand-magic-sparkles text-xs"></i>
                         <span>Advisor</span>
-                        <span class="text-[8px] font-bold uppercase tracking-wider bg-white/20 rounded px-1 py-px leading-none">AI</span>
+                        <span
+                            class="text-[8px] font-bold uppercase tracking-wider bg-white/20 rounded px-1 py-px leading-none">AI</span>
                     </a>
                 </nav>
                 {% endif %}
@@ -246,13 +250,25 @@
         <div id="mobileMenu"
             class="mobile-menu closed md:hidden absolute left-0 right-0 top-full border-t border-gray-100 bg-white/95 backdrop-blur-lg shadow-lg">
             <div class="max-w-7xl mx-auto px-4 py-2 space-y-0.5">
-                <a href="/dashboard" data-nav="/dashboard"
+                <a href="/daily-expenses" data-nav="/daily-expenses"
                     class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
-                    <i class="fas fa-tachometer-alt w-4 text-center nav-icon"></i>Dashboard
+                    <i class="fas fa-wallet w-4 text-center nav-icon"></i>Daily Expenses
                 </a>
                 <a href="/upload" data-nav="/upload"
                     class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-cloud-upload-alt w-4 text-center nav-icon"></i>Upload
+                </a>
+                <a href="/liabilities/dashboard" data-nav="/liabilities/dashboard"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                    <i class="fas fa-tasks w-4 text-center nav-icon"></i>Liabilities
+                </a>
+                <a href="/daily-income" data-nav="/daily-income"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                    <i class="fas fa-hand-holding-usd w-4 text-center nav-icon"></i>Income
+                </a>
+                <a href="/dashboard" data-nav="/dashboard"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                    <i class="fas fa-tachometer-alt w-4 text-center nav-icon"></i>Dashboard
                 </a>
                 <a href="/statements" data-nav="/statements"
                     class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
@@ -262,30 +278,19 @@
                     class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-receipt w-4 text-center nav-icon"></i>Transactions
                 </a>
-                <a href="/reports" data-nav="/reports"
-                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
-                    <i class="fas fa-chart-pie w-4 text-center nav-icon"></i>Reports
-                </a>
                 <a href="/accounts" data-nav="/accounts"
                     class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-id-card w-4 text-center nav-icon"></i>Accounts
                 </a>
+                <a href="/reports" data-nav="/reports"
+                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
+                    <i class="fas fa-chart-pie w-4 text-center nav-icon"></i>Reports
+                </a>
                 <a href="/advisor" data-nav="/advisor"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 my-1">
                     <i class="fas fa-wand-magic-sparkles w-4 text-center"></i>Advisor
-                    <span class="ml-auto text-[8px] font-bold uppercase tracking-wider bg-white/20 rounded px-1.5 py-0.5 leading-none">AI</span>
-                </a>
-                <a href="/daily-expenses" data-nav="/daily-expenses"
-                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
-                    <i class="fas fa-wallet w-4 text-center nav-icon"></i>Daily Expenses
-                </a>
-                <a href="/daily-income" data-nav="/daily-income"
-                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
-                    <i class="fas fa-hand-holding-usd w-4 text-center nav-icon"></i>Income
-                </a>
-                <a href="/liabilities/dashboard" data-nav="/liabilities/dashboard"
-                    class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
-                    <i class="fas fa-tasks w-4 text-center nav-icon"></i>Liabilities
+                    <span
+                        class="ml-auto text-[8px] font-bold uppercase tracking-wider bg-white/20 rounded px-1.5 py-0.5 leading-none">AI</span>
                 </a>
             </div>
         </div>
