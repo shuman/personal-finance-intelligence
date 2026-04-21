@@ -179,10 +179,10 @@ class StatementService:
         fees = data.get("fees", [])
         account_id = data.get("account_id")
 
-        # Check for existing statement (re-upload case)
-        existing = await self._check_duplicate_hash(file_hash, user_id)
+        # Check for existing statement (re-upload case, scoped to same account)
+        existing = await self._check_duplicate_hash(file_hash, user_id, account_id)
         if not existing:
-            existing = await self._check_duplicate_filename(filename, user_id)
+            existing = await self._check_duplicate_filename(filename, user_id, account_id)
 
         is_reupload = existing is not None
 
@@ -678,10 +678,10 @@ class StatementService:
         _EXPLICIT = {"bank_name", "account_id", "extraction_method", "ai_confidence"}
         safe_meta = {k: v for k, v in metadata.items() if k not in _EXPLICIT}
 
-        # Re-upload support: update existing statement in-place
-        existing = await self._check_duplicate_hash(file_hash, user_id)
+        # Re-upload support: update existing statement in-place (scoped to same account)
+        existing = await self._check_duplicate_hash(file_hash, user_id, account_id)
         if not existing:
-            existing = await self._check_duplicate_filename(filename, user_id)
+            existing = await self._check_duplicate_filename(filename, user_id, account_id)
 
         is_reupload = existing is not None
 
@@ -955,11 +955,13 @@ class StatementService:
                 "These dates must be present in the PDF."
             )
 
-    async def _check_duplicate_filename(self, filename: str, user_id: int = None) -> Optional[Statement]:
+    async def _check_duplicate_filename(self, filename: str, user_id: int = None, account_id: int = None) -> Optional[Statement]:
         """Find a statement by filename, including soft-deleted variants.
 
-        Searches globally (unique constraint is global) but prefers the
-        current user's record when multiple matches exist.
+        Prefers the current user's record and matching account_id when
+        multiple matches exist.  A statement linked to a different account
+        is NOT considered a duplicate — the same file may belong to
+        multiple accounts.
         """
         conditions = or_(
             Statement.filename == filename,
@@ -971,17 +973,23 @@ class StatementService:
         rows = result.scalars().all()
         if not rows:
             return None
-        # Prefer the current user's record
+        # Prefer: same user + same account, then same user, then any
+        if account_id is not None:
+            for r in rows:
+                if r.user_id == user_id and r.account_id == account_id:
+                    return r
         for r in rows:
             if r.user_id == user_id:
                 return r
         return rows[0]
 
-    async def _check_duplicate_hash(self, file_hash: str, user_id: int = None) -> Optional[Statement]:
+    async def _check_duplicate_hash(self, file_hash: str, user_id: int = None, account_id: int = None) -> Optional[Statement]:
         """Find a statement by pdf hash, including soft-deleted variants.
 
-        Searches globally (unique constraint is global) but prefers the
-        current user's record when multiple matches exist.
+        Prefers the current user's record and matching account_id when
+        multiple matches exist.  A statement linked to a different account
+        is NOT considered a duplicate — the same file may belong to
+        multiple accounts.
         """
         conditions = or_(
             Statement.pdf_hash == file_hash,
@@ -993,7 +1001,11 @@ class StatementService:
         rows = result.scalars().all()
         if not rows:
             return None
-        # Prefer the current user's record
+        # Prefer: same user + same account, then same user, then any
+        if account_id is not None:
+            for r in rows:
+                if r.user_id == user_id and r.account_id == account_id:
+                    return r
         for r in rows:
             if r.user_id == user_id:
                 return r
