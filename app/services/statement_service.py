@@ -230,6 +230,13 @@ class StatementService:
 
         self._validate_required_fields(metadata)
 
+        # Validate account_id exists in DB (frontend may reference a deleted account)
+        if account_id is not None:
+            acct = await self.db.execute(select(Account).where(Account.id == account_id, Account.user_id == user_id))
+            if acct.scalar_one_or_none() is None:
+                logger.warning(f"account_id={account_id} not found, setting to None")
+                account_id = None
+
         # Use Claude-extracted bank_name if better than parameter default
         effective_bank_name = bank_name
         if metadata.get("bank_name") and metadata["bank_name"] not in ("Unknown", ""):
@@ -658,6 +665,13 @@ class StatementService:
 
         self._validate_required_fields(metadata)
 
+        # Validate account_id exists in DB
+        if account_id is not None:
+            acct = await self.db.execute(select(Account).where(Account.id == account_id, Account.user_id == user_id))
+            if acct.scalar_one_or_none() is None:
+                logger.warning(f"account_id={account_id} not found, setting to None")
+                account_id = None
+
         # Use Claude-extracted bank_name if better than parameter default
         effective_bank_name = bank_name
         if metadata.get("bank_name") and metadata["bank_name"] not in ("Unknown", ""):
@@ -846,6 +860,7 @@ class StatementService:
                 .where(
                     AiExtraction.file_hash == file_hash,
                     AiExtraction.raw_response.isnot(None),
+                    AiExtraction.user_id == user_id,
                 )
                 .order_by(AiExtraction.created_at.desc())
                 .limit(1)
@@ -956,59 +971,47 @@ class StatementService:
             )
 
     async def _check_duplicate_filename(self, filename: str, user_id: int = None, account_id: int = None) -> Optional[Statement]:
-        """Find a statement by filename, including soft-deleted variants.
+        """Find a statement by filename for the current user, including soft-deleted variants.
 
-        Prefers the current user's record and matching account_id when
-        multiple matches exist.  A statement linked to a different account
-        is NOT considered a duplicate — the same file may belong to
-        multiple accounts.
+        Scoped to user_id.  If account_id is provided, prefers a match on
+        the same account so the same file can be uploaded for different
+        accounts.
         """
         conditions = or_(
             Statement.filename == filename,
             Statement.filename.like(f"__deleted__%\\_\\_{filename}"),
         )
-        result = await self.db.execute(
-            select(Statement).where(conditions)
-        )
+        query = select(Statement).where(conditions, Statement.user_id == user_id)
+        result = await self.db.execute(query)
         rows = result.scalars().all()
         if not rows:
             return None
-        # Prefer: same user + same account, then same user, then any
         if account_id is not None:
             for r in rows:
-                if r.user_id == user_id and r.account_id == account_id:
+                if r.account_id == account_id:
                     return r
-        for r in rows:
-            if r.user_id == user_id:
-                return r
         return rows[0]
 
     async def _check_duplicate_hash(self, file_hash: str, user_id: int = None, account_id: int = None) -> Optional[Statement]:
-        """Find a statement by pdf hash, including soft-deleted variants.
+        """Find a statement by pdf hash for the current user, including soft-deleted variants.
 
-        Prefers the current user's record and matching account_id when
-        multiple matches exist.  A statement linked to a different account
-        is NOT considered a duplicate — the same file may belong to
-        multiple accounts.
+        Scoped to user_id.  If account_id is provided, prefers a match on
+        the same account so the same file can be uploaded for different
+        accounts.
         """
         conditions = or_(
             Statement.pdf_hash == file_hash,
             Statement.pdf_hash.like(f"__deleted__%\\_\\_{file_hash}"),
         )
-        result = await self.db.execute(
-            select(Statement).where(conditions)
-        )
+        query = select(Statement).where(conditions, Statement.user_id == user_id)
+        result = await self.db.execute(query)
         rows = result.scalars().all()
         if not rows:
             return None
-        # Prefer: same user + same account, then same user, then any
         if account_id is not None:
             for r in rows:
-                if r.user_id == user_id and r.account_id == account_id:
+                if r.account_id == account_id:
                     return r
-        for r in rows:
-            if r.user_id == user_id:
-                return r
         return rows[0]
 
     # ------------------------------------------------------------------
