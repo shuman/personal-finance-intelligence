@@ -320,6 +320,7 @@ class StatementService:
             txn_account_number = txn_data.get("account_number") or statement.account_number
             txn_fields = {k: v for k, v in txn_data.items() if k not in ("account_number", "statement_id", "account_id")}
             transaction = Transaction(
+                uuid=str(uuid.uuid4()),
                 statement_id=statement.id,
                 account_number=txn_account_number,
                 account_id=txn_account_id,
