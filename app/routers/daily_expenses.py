@@ -29,6 +29,13 @@ class ExpenseCreate(BaseModel):
 
 
 class ExpenseUpdate(BaseModel):
+    # Basic editable fields
+    amount: Optional[float] = None
+    description_raw: Optional[str] = None
+    payment_method: Optional[str] = None
+    transaction_date: Optional[date] = None
+    currency: Optional[str] = None
+    # AI override fields
     category: Optional[str] = None
     subcategory: Optional[str] = None
     description_normalized: Optional[str] = None
@@ -224,21 +231,41 @@ async def update_expense(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Apply user override/corrections to an expense.
-    Stores corrections as high-priority rules for future matching.
+    Update an expense — basic fields and/or AI override fields.
+    Stores AI corrections as high-priority rules for future matching.
     """
     service = DailyExpenseService(db)
+    expense = None
 
-    expense = await service.apply_user_override(
-        expense_id=expense_id,
-        user_id=current_user.id,
-        category=body.category,
-        subcategory=body.subcategory,
-        description_normalized=body.description_normalized,
-    )
+    # Update basic fields if any are provided
+    basic_fields = {
+        "amount": body.amount,
+        "description_raw": body.description_raw,
+        "payment_method": body.payment_method,
+        "transaction_date": body.transaction_date,
+        "currency": body.currency,
+    }
+    has_basic = any(v is not None for v in basic_fields.values())
+    if has_basic:
+        expense = await service.update_basic_fields(expense_id, current_user.id, basic_fields)
+        if not expense:
+            raise HTTPException(status_code=404, detail="Expense not found")
 
-    if not expense:
-        raise HTTPException(status_code=404, detail="Expense not found")
+    # Apply AI override if category/subcategory fields are provided
+    has_ai = body.category is not None or body.subcategory is not None or body.description_normalized is not None
+    if has_ai:
+        expense = await service.apply_user_override(
+            expense_id=expense_id,
+            user_id=current_user.id,
+            category=body.category,
+            subcategory=body.subcategory,
+            description_normalized=body.description_normalized,
+        )
+        if not expense:
+            raise HTTPException(status_code=404, detail="Expense not found")
+
+    if not has_basic and not has_ai:
+        raise HTTPException(status_code=400, detail="No fields to update")
 
     return ExpenseResponse.from_orm(expense)
 

@@ -229,6 +229,7 @@
                 </button>
             </div>
             <form id="editRuleForm" class="px-6 py-5 space-y-4">
+                <div id="editRuleError" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
                 <input type="hidden" id="editRuleId">
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Merchant Pattern</label>
@@ -310,6 +311,8 @@ function closeModal() {
 function openEditModal(ruleId) {
     const rule = allRules.find(r => r.id === ruleId);
     if (!rule) return;
+    document.getElementById('editRuleError').classList.add('hidden');
+    document.getElementById('editRuleError').textContent = '';
     document.getElementById('editRuleId').value = rule.id;
     document.getElementById('editMerchantPattern').value = rule.merchant_pattern;
     document.getElementById('editCategory').value = rule.category;
@@ -513,6 +516,10 @@ async function submitAccount() {
 }
 
 async function submitEditRule() {
+    const errEl = document.getElementById('editRuleError');
+    errEl.classList.add('hidden');
+    errEl.textContent = '';
+
     const ruleId = document.getElementById('editRuleId').value;
     const body = {
         merchant_pattern: document.getElementById('editMerchantPattern').value,
@@ -533,7 +540,8 @@ async function submitEditRule() {
         await loadRules();
     } else {
         const err = await res.json();
-        alert('Error: ' + (err.detail || JSON.stringify(err)));
+        errEl.textContent = err.detail || 'Failed to update rule. Please try again.';
+        errEl.classList.remove('hidden');
     }
 }
 

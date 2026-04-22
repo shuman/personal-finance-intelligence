@@ -451,6 +451,36 @@ Rules:
             self.db.add(rule)
 
     # -----------------------------------------------------------------------
+    # Basic Field Updates
+    # -----------------------------------------------------------------------
+
+    async def update_basic_fields(
+        self,
+        expense_id: int,
+        user_id: int,
+        fields: dict,
+    ) -> Optional[DailyExpense]:
+        """Update basic editable fields (amount, description_raw, etc.) on an expense."""
+        expense = await self.get_expense_by_id(expense_id, user_id=user_id)
+        if not expense:
+            return None
+
+        if fields.get("amount") is not None:
+            expense.amount = Decimal(str(fields["amount"]))
+        if fields.get("description_raw") is not None:
+            expense.description_raw = fields["description_raw"]
+        if fields.get("payment_method") is not None:
+            expense.payment_method = fields["payment_method"]
+        if fields.get("transaction_date") is not None:
+            expense.transaction_date = fields["transaction_date"]
+        if fields.get("currency") is not None:
+            expense.currency = fields["currency"]
+
+        await self.db.commit()
+        await self.db.refresh(expense)
+        return expense
+
+    # -----------------------------------------------------------------------
     # User Overrides
     # -----------------------------------------------------------------------
 

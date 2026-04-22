@@ -149,57 +149,44 @@
 {% block extra_scripts %}
 <script>
 let selectedDraftIds = new Set();
+const expenseData = new Map();
 
+// -----------------------------------------------------------------------
 // Initialize
+// -----------------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     loadRecentExpenses();
     loadDraftExpenses();
     loadProcessedExpenses();
     loadExpenses();
-
-    // Set today's date as default
     document.getElementById('expenseDate').valueAsDate = new Date();
 });
 
-// Handle form submission
+// -----------------------------------------------------------------------
+// Quick Add form (POST only)
+// -----------------------------------------------------------------------
 document.getElementById('expenseForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-
     const amount = parseFloat(document.getElementById('expenseAmount').value);
     const description = document.getElementById('expenseDescription').value.trim();
     const paymentMethod = document.getElementById('expensePaymentMethod').value;
     const date = document.getElementById('expenseDate').value || new Date().toISOString().split('T')[0];
-
-    if (!amount || !description) {
-        showToast('Please fill in all required fields', 'error');
-        return;
-    }
+    if (!amount || !description) { showToast('Please fill in all required fields', 'error'); return; }
 
     try {
         const response = await fetch('/api/daily-expenses', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                amount,
-                description,
-                payment_method: paymentMethod,
-                transaction_date: date,
-                currency: 'BDT'
-            })
+            body: JSON.stringify({ amount, description, payment_method: paymentMethod, transaction_date: date, currency: 'BDT' })
         });
-
         if (response.ok) {
             showToast('Expense saved as draft!');
             clearForm();
             loadRecentExpenses();
             loadDraftExpenses();
-        } else {
-            throw new Error('Failed to save expense');
-        }
-    } catch (err) {
-        showToast('Error saving expense', 'error');
-        console.error(err);
-    }
+            loadExpenses();
+        } else { throw new Error('Failed to save expense'); }
+    } catch (err) { showToast('Error saving expense', 'error'); console.error(err); }
 });
 
 function clearForm() {
@@ -208,92 +195,175 @@ function clearForm() {
     document.getElementById('expenseAmount').focus();
 }
 
+// -----------------------------------------------------------------------
+// Inline edit helpers
+// -----------------------------------------------------------------------
+function paymentOptions(selected) {
+    return [{v:'cash',l:'Cash'},{v:'bkash',l:'bKash'},{v:'nagad',l:'Nagad'},{v:'rocket',l:'Rocket'},{v:'card_estimate',l:'Card'}]
+        .map(m => `<option value="${m.v}" ${m.v===selected?'selected':''}>${m.l}</option>`).join('');
+}
+
+function escAttr(s) { return s.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function editInline(prefix, id) {
+    const d = expenseData.get(id); if (!d) return;
+    document.getElementById(`${prefix}_view_${id}`).classList.add('hidden');
+    document.getElementById(`${prefix}_edit_${id}`).classList.remove('hidden');
+    const el = (s) => document.getElementById(s);
+    el(`${prefix}_amount_${id}`).value = d.amount;
+    el(`${prefix}_desc_${id}`).value = d.description_raw;
+    el(`${prefix}_pay_${id}`).value = d.payment_method;
+    el(`${prefix}_date_${id}`).value = d.transaction_date;
+    el(`${prefix}_desc_${id}`).focus();
+}
+
+function cancelInlineEdit(prefix, id) {
+    document.getElementById(`${prefix}_view_${id}`).classList.remove('hidden');
+    document.getElementById(`${prefix}_edit_${id}`).classList.add('hidden');
+}
+
+async function saveInlineEdit(prefix, id) {
+    const el = (s) => document.getElementById(s);
+    const amount = parseFloat(el(`${prefix}_amount_${id}`).value);
+    const description_raw = el(`${prefix}_desc_${id}`).value.trim();
+    const payment_method = el(`${prefix}_pay_${id}`).value;
+    const transaction_date = el(`${prefix}_date_${id}`).value;
+    if (!amount || !description_raw) { showToast('Amount and description are required', 'error'); return; }
+
+    try {
+        const response = await fetch(`/api/daily-expenses/${id}`, {
+            method: 'PATCH',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ amount, description_raw, payment_method, transaction_date, currency: 'BDT' })
+        });
+        if (response.ok) {
+            showToast('Expense updated!');
+            loadRecentExpenses(); loadDraftExpenses(); loadExpenses();
+        } else { throw new Error('Failed'); }
+    } catch (err) { showToast('Error updating expense', 'error'); console.error(err); }
+}
+
+function storeExpense(e) { expenseData.set(e.id, e); }
+
+// -----------------------------------------------------------------------
+// Recent Entries
+// -----------------------------------------------------------------------
 async function loadRecentExpenses() {
     try {
         const response = await fetch('/api/daily-expenses?limit=10');
         const expenses = await response.json();
-
         const container = document.getElementById('recentExpenses');
-        if (expenses.length === 0) {
-            container.innerHTML = '<p class="text-sm text-gray-400 italic">No expenses yet</p>';
-            return;
-        }
+        if (expenses.length === 0) { container.innerHTML = '<p class="text-sm text-gray-400 italic">No expenses yet</p>'; return; }
 
+        expenses.forEach(storeExpense);
         container.innerHTML = expenses.map(e => `
-            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900">${e.description_raw}</p>
-                    <p class="text-xs text-gray-500">${new Date(e.transaction_date).toLocaleDateString()} • ${e.payment_method}</p>
+            <div>
+                <div id="recent_view_${e.id}" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">${escAttr(e.description_raw)}</p>
+                        <p class="text-xs text-gray-500">${new Date(e.transaction_date).toLocaleDateString()} • ${e.payment_method}</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <button onclick="editInline('recent',${e.id})" class="text-blue-600 hover:text-blue-800" title="Edit">
+                            <i class="fas fa-pen text-sm"></i>
+                        </button>
+                        <div class="text-right">
+                            <p class="text-sm font-bold text-gray-900">৳${e.amount}</p>
+                            <span class="inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadge(e.ai_status)}">${e.ai_status}</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <p class="text-sm font-bold text-gray-900">৳${e.amount}</p>
-                    <span class="inline-block px-2 py-0.5 text-xs rounded-full ${getStatusBadge(e.ai_status)}">${e.ai_status}</span>
+                <div id="recent_edit_${e.id}" class="hidden p-3 bg-blue-50 rounded-lg border border-blue-200 mt-1">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <input id="recent_amount_${e.id}" type="number" step="0.01" min="0" class="px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">
+                        <input id="recent_desc_${e.id}" type="text" class="px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">
+                        <select id="recent_pay_${e.id}" class="px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">${paymentOptions(e.payment_method)}</select>
+                        <input id="recent_date_${e.id}" type="date" class="px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="saveInlineEdit('recent',${e.id})" class="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-blue-700 font-medium">
+                            <i class="fas fa-check mr-1"></i>Save
+                        </button>
+                        <button onclick="cancelInlineEdit('recent',${e.id})" class="bg-gray-200 text-gray-700 text-sm px-3 py-1.5 rounded-md hover:bg-gray-300">
+                            Cancel
+                        </button>
+                    </div>
                 </div>
             </div>
         `).join('');
-    } catch (err) {
-        console.error('Error loading recent expenses:', err);
-    }
+    } catch (err) { console.error('Error loading recent expenses:', err); }
 }
 
+// -----------------------------------------------------------------------
+// Draft Expenses
+// -----------------------------------------------------------------------
 async function loadDraftExpenses() {
     try {
         const response = await fetch('/api/daily-expenses/drafts');
         const drafts = await response.json();
-
         document.getElementById('draftCount').textContent = drafts.length;
-
         const container = document.getElementById('draftExpenses');
         const section = document.getElementById('draftsSection');
-
-        if (drafts.length === 0) {
-            section.classList.add('hidden');
-            return;
-        }
+        if (drafts.length === 0) { section.classList.add('hidden'); return; }
 
         section.classList.remove('hidden');
+        drafts.forEach(storeExpense);
         container.innerHTML = drafts.map(d => `
-            <div class="flex items-center gap-3 p-3 bg-white rounded-lg border border-yellow-200">
-                <input type="checkbox" class="w-4 h-4 text-blue-600" value="${d.id}" onchange="toggleDraftSelection(${d.id})">
-                <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-900">${d.description_raw}</p>
-                    <p class="text-xs text-gray-500">${new Date(d.transaction_date).toLocaleDateString()}</p>
+            <div>
+                <div id="draft_view_${d.id}" class="flex items-center gap-3 p-3 bg-white rounded-lg border border-yellow-200">
+                    <input type="checkbox" class="w-4 h-4 text-blue-600" value="${d.id}" onchange="toggleDraftSelection(${d.id})">
+                    <div class="flex-1">
+                        <p class="text-sm font-medium text-gray-900">${escAttr(d.description_raw)}</p>
+                        <p class="text-xs text-gray-500">${new Date(d.transaction_date).toLocaleDateString()}</p>
+                    </div>
+                    <p class="text-sm font-bold text-gray-900">৳${d.amount}</p>
+                    <button onclick="editInline('draft',${d.id})" class="text-blue-600 hover:text-blue-800 ml-2" title="Edit">
+                        <i class="fas fa-pen text-sm"></i>
+                    </button>
                 </div>
-                <p class="text-sm font-bold text-gray-900">৳${d.amount}</p>
+                <div id="draft_edit_${d.id}" class="hidden p-3 bg-blue-50 rounded-lg border border-blue-200 mt-1">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                        <input id="draft_amount_${d.id}" type="number" step="0.01" min="0" class="px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">
+                        <input id="draft_desc_${d.id}" type="text" class="px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">
+                        <select id="draft_pay_${d.id}" class="px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">${paymentOptions(d.payment_method)}</select>
+                        <input id="draft_date_${d.id}" type="date" class="px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex gap-2 mt-2">
+                        <button onclick="saveInlineEdit('draft',${d.id})" class="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-blue-700 font-medium">
+                            <i class="fas fa-check mr-1"></i>Save
+                        </button>
+                        <button onclick="cancelInlineEdit('draft',${d.id})" class="bg-gray-200 text-gray-700 text-sm px-3 py-1.5 rounded-md hover:bg-gray-300">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
             </div>
         `).join('');
-    } catch (err) {
-        console.error('Error loading drafts:', err);
-    }
+    } catch (err) { console.error('Error loading drafts:', err); }
 }
 
+// -----------------------------------------------------------------------
+// Processed Expenses (AI Review)
+// -----------------------------------------------------------------------
 async function loadProcessedExpenses() {
     try {
         const response = await fetch('/api/daily-expenses/processed');
         const processed = await response.json();
-
         document.getElementById('reviewCount').textContent = processed.length;
-
         const container = document.getElementById('reviewExpenses');
         const section = document.getElementById('reviewSection');
-
-        if (processed.length === 0) {
-            section.classList.add('hidden');
-            return;
-        }
+        if (processed.length === 0) { section.classList.add('hidden'); return; }
 
         section.classList.remove('hidden');
         container.innerHTML = processed.map(p => `
             <div class="p-4 bg-white rounded-lg border border-blue-200" id="review_${p.id}">
                 <div class="flex items-start justify-between mb-3">
                     <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-900">${p.description_raw}</p>
+                        <p class="text-sm font-medium text-gray-900">${escAttr(p.description_raw)}</p>
                         <p class="text-xs text-gray-500">${new Date(p.transaction_date).toLocaleDateString()} • ৳${p.amount} • ${p.payment_method}</p>
                     </div>
                     ${p.confidence_score ? `<span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">AI: ${(p.confidence_score * 100).toFixed(0)}%</span>` : ''}
                 </div>
-
-                <!-- Preview Mode -->
                 <div id="preview_${p.id}" class="mb-3">
                     <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
                         <div class="flex items-center justify-between">
@@ -306,14 +376,11 @@ async function loadProcessedExpenses() {
                                 </p>
                             </div>
                             <button onclick="enableEdit(${p.id})" class="text-blue-600 hover:text-blue-800 text-xs font-medium flex items-center gap-1">
-                                <i class="fas fa-edit"></i>
-                                Edit
+                                <i class="fas fa-edit"></i>Edit
                             </button>
                         </div>
                     </div>
                 </div>
-
-                <!-- Edit Mode (Hidden by default) -->
                 <div id="edit_${p.id}" class="mb-3 hidden">
                     <div class="grid grid-cols-2 gap-2">
                         <div>
@@ -324,26 +391,21 @@ async function loadProcessedExpenses() {
                         </div>
                         <div>
                             <label class="text-xs font-medium text-gray-700 mb-1 block">Subcategory</label>
-                            <input type="text" value="${p.subcategory || ''}" placeholder="Optional"
+                            <input type="text" value="${escAttr(p.subcategory || '')}" placeholder="Optional"
                                    id="subcat_${p.id}"
                                    class="w-full text-sm border border-gray-300 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
                 </div>
-
-                <!-- Action Buttons -->
                 <div class="flex gap-2">
-                    <!-- Always visible Accept button -->
                     <button onclick="acceptExpense(${p.id})" id="accept_btn_${p.id}"
                             class="flex-1 bg-green-600 text-white text-sm px-4 py-2 rounded-md hover:bg-green-700 font-medium">
                         <i class="fas fa-check mr-1"></i>Accept & Finalize
                     </button>
-                    <!-- Save button (only visible in edit mode) -->
                     <button onclick="saveEdits(${p.id})" id="save_btn_${p.id}"
                             class="hidden flex-1 bg-blue-600 text-white text-sm px-4 py-2 rounded-md hover:bg-blue-700 font-medium">
                         <i class="fas fa-save mr-1"></i>Save Changes
                     </button>
-                    <!-- Cancel button (only visible in edit mode) -->
                     <button onclick="cancelEdit(${p.id})" id="cancel_btn_${p.id}"
                             class="hidden bg-gray-200 text-gray-700 text-sm px-4 py-2 rounded-md hover:bg-gray-300">
                         Cancel
@@ -351,53 +413,70 @@ async function loadProcessedExpenses() {
                 </div>
             </div>
         `).join('');
-    } catch (err) {
-        console.error('Error loading processed expenses:', err);
-    }
+    } catch (err) { console.error('Error loading processed expenses:', err); }
 }
 
+// -----------------------------------------------------------------------
+// All Expenses table
+// -----------------------------------------------------------------------
 async function loadExpenses() {
     const status = document.getElementById('filterStatus').value;
     const url = status ? `/api/daily-expenses?status=${status}&limit=100` : '/api/daily-expenses?limit=100';
-
     try {
         const response = await fetch(url);
         const expenses = await response.json();
-
         const tbody = document.getElementById('expensesTable');
-        if (expenses.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">No expenses found</td></tr>';
-            return;
-        }
+        if (expenses.length === 0) { tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-400">No expenses found</td></tr>'; return; }
 
+        expenses.forEach(storeExpense);
         tbody.innerHTML = expenses.map(e => `
-            <tr class="hover:bg-gray-50">
+            <tr id="tbl_view_${e.id}" class="hover:bg-gray-50">
                 <td class="px-6 py-4 text-sm text-gray-900">${new Date(e.transaction_date).toLocaleDateString()}</td>
                 <td class="px-6 py-4">
-                    <p class="text-sm font-medium text-gray-900">${e.description_raw}</p>
-                    ${e.description_normalized ? `<p class="text-xs text-gray-500">${e.description_normalized}</p>` : ''}
+                    <p class="text-sm font-medium text-gray-900">${escAttr(e.description_raw)}</p>
+                    ${e.description_normalized ? `<p class="text-xs text-gray-500">${escAttr(e.description_normalized)}</p>` : ''}
                 </td>
-                <td class="px-6 py-4 text-sm text-gray-700">${e.category || '-'} ${e.subcategory ? `<br><span class="text-xs text-gray-500">${e.subcategory}</span>` : ''}</td>
+                <td class="px-6 py-4 text-sm text-gray-700">${e.category || '-'} ${e.subcategory ? `<br><span class="text-xs text-gray-500">${escAttr(e.subcategory)}</span>` : ''}</td>
                 <td class="px-6 py-4 text-sm text-gray-700">${e.payment_method}</td>
                 <td class="px-6 py-4 text-sm font-bold text-right text-gray-900">৳${e.amount}</td>
                 <td class="px-6 py-4 text-center">
-                    <button onclick="deleteExpense(${e.id})" class="text-red-600 hover:text-red-800">
-                        <i class="fas fa-trash text-sm"></i>
-                    </button>
+                    <div class="flex items-center justify-center gap-3">
+                        <button onclick="editInline('tbl',${e.id})" class="text-blue-600 hover:text-blue-800" title="Edit">
+                            <i class="fas fa-pen text-sm"></i>
+                        </button>
+                        <button onclick="deleteExpense(${e.id})" class="text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash text-sm"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <tr id="tbl_edit_${e.id}" class="hidden bg-blue-50">
+                <td class="px-4 py-3"><input id="tbl_date_${e.id}" type="date" class="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500"></td>
+                <td class="px-4 py-3"><input id="tbl_desc_${e.id}" type="text" class="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-sm text-gray-400 italic">${e.category || '-'}</td>
+                <td class="px-4 py-3"><select id="tbl_pay_${e.id}" class="w-full px-2 py-1.5 text-sm border rounded-md focus:ring-2 focus:ring-blue-500">${paymentOptions(e.payment_method)}</select></td>
+                <td class="px-4 py-3"><input id="tbl_amount_${e.id}" type="number" step="0.01" min="0" class="w-24 px-2 py-1.5 text-sm border rounded-md text-right focus:ring-2 focus:ring-blue-500"></td>
+                <td class="px-4 py-3 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="saveInlineEdit('tbl',${e.id})" class="bg-blue-600 text-white text-xs px-2 py-1 rounded hover:bg-blue-700">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button onclick="cancelInlineEdit('tbl',${e.id})" class="bg-gray-200 text-gray-700 text-xs px-2 py-1 rounded hover:bg-gray-300">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `).join('');
-    } catch (err) {
-        console.error('Error loading expenses:', err);
-    }
+    } catch (err) { console.error('Error loading expenses:', err); }
 }
 
+// -----------------------------------------------------------------------
+// Draft batch selection
+// -----------------------------------------------------------------------
 function toggleDraftSelection(id) {
-    if (selectedDraftIds.has(id)) {
-        selectedDraftIds.delete(id);
-    } else {
-        selectedDraftIds.add(id);
-    }
+    if (selectedDraftIds.has(id)) selectedDraftIds.delete(id);
+    else selectedDraftIds.add(id);
     document.getElementById('processSelectedBtn').disabled = selectedDraftIds.size === 0;
 }
 
@@ -411,166 +490,108 @@ function selectAllDrafts() {
 
 async function processSelected() {
     if (selectedDraftIds.size === 0) return;
-
     const btn = document.getElementById('processSelectedBtn');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
-
     try {
         const response = await fetch('/api/daily-expenses/batch-process', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({expense_ids: Array.from(selectedDraftIds)})
         });
-
         const result = await response.json();
-
         if (result.success) {
             showToast(`Processed ${result.processed_count} expenses! Cost: $${result.cost_usd.toFixed(4)}`);
             selectedDraftIds.clear();
-            loadDraftExpenses();
-            loadProcessedExpenses();
-            loadExpenses();
-        } else {
-            throw new Error('Batch processing failed');
-        }
-    } catch (err) {
-        showToast('Error processing expenses', 'error');
-        console.error(err);
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-magic"></i><span>Process with AI</span>';
-    }
+            loadDraftExpenses(); loadProcessedExpenses(); loadExpenses();
+        } else { throw new Error('Batch processing failed'); }
+    } catch (err) { showToast('Error processing expenses', 'error'); console.error(err); }
+    finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-magic"></i><span>Process with AI</span>'; }
 }
 
+// -----------------------------------------------------------------------
+// Processed expenses — accept / edit category
+// -----------------------------------------------------------------------
 async function acceptExpense(id) {
-    // Accept AI categorization as-is and finalize
     const categoryEl = document.getElementById(`cat_${id}`);
     const subcategoryEl = document.getElementById(`subcat_${id}`);
-
-    // Get current values (from preview or edit mode)
     const category = categoryEl?.value || categoryEl?.getAttribute('data-value');
     const subcategory = subcategoryEl?.value || subcategoryEl?.getAttribute('data-value');
-
     try {
         const response = await fetch(`/api/daily-expenses/${id}`, {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({category, subcategory})
         });
-
         if (response.ok) {
-            showToast('✓ Expense accepted and finalized!');
-            loadProcessedExpenses();
-            loadExpenses();
-            loadRecentExpenses();
+            showToast('Expense accepted and finalized!');
+            loadProcessedExpenses(); loadExpenses(); loadRecentExpenses();
         }
-    } catch (err) {
-        showToast('Error accepting expense', 'error');
-        console.error(err);
-    }
+    } catch (err) { showToast('Error accepting expense', 'error'); console.error(err); }
 }
 
 function enableEdit(id) {
-    // Show edit mode, hide preview
     document.getElementById(`preview_${id}`).classList.add('hidden');
     document.getElementById(`edit_${id}`).classList.remove('hidden');
-
-    // Toggle buttons
     document.getElementById(`accept_btn_${id}`).classList.add('hidden');
     document.getElementById(`save_btn_${id}`).classList.remove('hidden');
     document.getElementById(`cancel_btn_${id}`).classList.remove('hidden');
 }
 
 function cancelEdit(id) {
-    // Hide edit mode, show preview
     document.getElementById(`preview_${id}`).classList.remove('hidden');
     document.getElementById(`edit_${id}`).classList.add('hidden');
-
-    // Toggle buttons
     document.getElementById(`accept_btn_${id}`).classList.remove('hidden');
     document.getElementById(`save_btn_${id}`).classList.add('hidden');
     document.getElementById(`cancel_btn_${id}`).classList.add('hidden');
 }
 
 async function saveEdits(id) {
-    // Save user's edited category values
     const category = document.getElementById(`cat_${id}`)?.value;
     const subcategory = document.getElementById(`subcat_${id}`)?.value;
-
     try {
         const response = await fetch(`/api/daily-expenses/${id}`, {
             method: 'PATCH',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({category, subcategory})
         });
-
         if (response.ok) {
-            showToast('✓ Changes saved and finalized!');
-            loadProcessedExpenses();
-            loadExpenses();
-            loadRecentExpenses();
+            showToast('Changes saved and finalized!');
+            loadProcessedExpenses(); loadExpenses(); loadRecentExpenses();
         }
-    } catch (err) {
-        showToast('Error saving changes', 'error');
-        console.error(err);
-    }
+    } catch (err) { showToast('Error saving changes', 'error'); console.error(err); }
 }
 
+// -----------------------------------------------------------------------
+// Shared utilities
+// -----------------------------------------------------------------------
 function getCategories() {
-    // Same categories as statement transactions
-    return [
-        "Groceries", "Food & Dining", "Transport", "Health",
-        "Utilities", "Shopping", "Software & Tools", "Freelancing",
-        "Entertainment", "Fees & Charges", "Financial Services",
-        "Travel & Hotels", "Education", "Insurance", "Charity",
-        "Government & Tax", "Personal Care", "Home & Garden",
-        "Bills & EMI", "Other"
-    ];
+    return ["Groceries","Food & Dining","Transport","Health","Utilities","Shopping","Software & Tools","Freelancing","Entertainment","Fees & Charges","Financial Services","Travel & Hotels","Education","Insurance","Charity","Government & Tax","Personal Care","Home & Garden","Bills & EMI","Other"];
 }
 
 async function deleteExpense(id) {
     if (!confirm('Delete this expense?')) return;
-
     try {
         const response = await fetch(`/api/daily-expenses/${id}`, {method: 'DELETE'});
         if (response.ok) {
             showToast('Expense deleted');
-            loadRecentExpenses();
-            loadDraftExpenses();
-            loadProcessedExpenses();
-            loadExpenses();
+            loadRecentExpenses(); loadDraftExpenses(); loadProcessedExpenses(); loadExpenses();
         }
-    } catch (err) {
-        showToast('Error deleting expense', 'error');
-        console.error(err);
-    }
+    } catch (err) { showToast('Error deleting expense', 'error'); console.error(err); }
 }
 
 function getStatusBadge(status) {
-    const badges = {
-        draft: 'bg-yellow-100 text-yellow-800',
-        pending: 'bg-blue-100 text-blue-800',
-        processed: 'bg-green-100 text-green-800'
-    };
-    return badges[status] || 'bg-gray-100 text-gray-800';
+    return {draft:'bg-yellow-100 text-yellow-800',pending:'bg-blue-100 text-blue-800',processed:'bg-green-100 text-green-800'}[status] || 'bg-gray-100 text-gray-800';
 }
 
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
-    const toastMessage = document.getElementById('toastMessage');
-
-    toastMessage.textContent = message;
-    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 ${
-        type === 'error' ? 'bg-red-600' : 'bg-green-600'
-    } text-white`;
+    document.getElementById('toastMessage').textContent = message;
+    toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center gap-2 ${type === 'error' ? 'bg-red-600' : 'bg-green-600'} text-white`;
     toast.classList.remove('hidden');
-
     setTimeout(() => toast.classList.add('hidden'), 3000);
 }
 
-async function exportExpenses() {
-    window.location.href = '/api/daily-expenses?limit=10000&format=csv';
-}
+async function exportExpenses() { window.location.href = '/api/daily-expenses?limit=10000&format=csv'; }
 </script>
 {% endblock %}

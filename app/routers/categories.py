@@ -5,7 +5,8 @@ Replaces the ML router with a persistent rule-memory system.
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete as sa_delete
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel
 from datetime import datetime
 
@@ -111,7 +112,12 @@ async def update_rule(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Update fields on an existing category rule."""
+    """Update fields on an existing category rule.
+
+    If changing source/merchant creates a unique constraint conflict
+    (same merchant + source + user), the old conflicting rule is deleted
+    and this one takes its place.
+    """
     result = await db.execute(
         select(CategoryRule).where(
             CategoryRule.id == rule_id,
@@ -134,7 +140,23 @@ async def update_rule(
     if body.confidence is not None:
         rule.confidence = body.confidence
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError:
+        # Unique constraint conflict: another rule with same
+        # (normalized_merchant, source, user_id) already exists.
+        # Delete the old conflicting rule and retry.
+        await db.rollback()
+        await db.execute(
+            sa_delete(CategoryRule).where(
+                CategoryRule.user_id == current_user.id,
+                CategoryRule.normalized_merchant == rule.normalized_merchant,
+                CategoryRule.source == rule.source,
+                CategoryRule.id != rule.id,
+            )
+        )
+        await db.commit()
+
     await db.refresh(rule)
     return rule
 
