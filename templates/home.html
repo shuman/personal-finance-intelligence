@@ -347,6 +347,64 @@
         </div>
     </section>
 
+    <!-- ===================== SECURITY & PRIVACY ===================== -->
+    <section class="relative py-20 lg:py-28 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 overflow-hidden">
+        <!-- Background subtle glow -->
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-full opacity-30 pointer-events-none" style="background: radial-gradient(circle at center, rgba(16, 185, 129, 0.15) 0%, transparent 70%);"></div>
+
+        <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="fade-up text-center mb-16">
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm font-medium mb-6">
+                    <i class="fas fa-lock"></i>
+                    Absolute Security
+                </div>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-white leading-tight mx-auto max-w-3xl">
+                    Zero-Knowledge Privacy.<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">Your Data, For Your Eyes Only.</span>
+                </h2>
+                <p class="mt-6 text-lg text-slate-300 leading-relaxed mx-auto max-w-2xl">
+                    We believe your financial footprint is yours alone. Our military-grade, application-layer encryption ensures that your identity, behavior, and balances remain completely invisible to everyone—including us.
+                </p>
+            </div>
+
+            <div class="fade-up grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Pillar 1 -->
+                <div class="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm group">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:border-emerald-500/50 transition-colors mb-6 mx-auto md:mx-0">
+                        <i class="fas fa-user-secret text-2xl text-emerald-400"></i>
+                    </div>
+                    <h3 class="text-white font-bold text-xl text-center md:text-left">Untraceable Identity</h3>
+                    <p class="text-slate-400 text-base mt-3 leading-relaxed text-center md:text-left">Your personal details are locked behind advanced cryptographic hashes. To anyone looking at our systems, including our own administrators, you are completely anonymous.</p>
+                </div>
+                
+                <!-- Pillar 2 -->
+                <div class="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm group">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:border-cyan-500/50 transition-colors mb-6 mx-auto md:mx-0">
+                        <i class="fas fa-shield-halved text-2xl text-cyan-400"></i>
+                    </div>
+                    <h3 class="text-white font-bold text-xl text-center md:text-left">Impenetrable Financials</h3>
+                    <p class="text-slate-400 text-base mt-3 leading-relaxed text-center md:text-left">Every transaction, account balance, and statement is heavily encrypted before it rests in our database. Only you hold the key to decode your financial life.</p>
+                </div>
+                
+                <!-- Pillar 3 -->
+                <div class="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm group">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:border-indigo-500/50 transition-colors mb-6 mx-auto md:mx-0">
+                        <i class="fas fa-server text-2xl text-indigo-400"></i>
+                    </div>
+                    <h3 class="text-white font-bold text-xl text-center md:text-left">Breach-Proof Architecture</h3>
+                    <p class="text-slate-400 text-base mt-3 leading-relaxed text-center md:text-left">In the impossible event of a complete database compromise, attackers would only extract meaningless, scrambled garbage. Your real information is safe.</p>
+                </div>
+            </div>
+
+            <div class="fade-up mt-16 text-center">
+                <button onclick="openSecurityModal()" class="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-semibold text-slate-900 bg-emerald-400 hover:bg-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-all">
+                    <i class="fas fa-lock-open"></i>
+                    Learn How We Protect You
+                </button>
+            </div>
+        </div>
+    </section>
+
     <!-- ===================== AI REPORTS ===================== -->
     <section id="reports" class="py-20 lg:py-28 bg-white">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1406,78 +1464,97 @@
     </section>
 
     <!-- ===================== FEATURES ===================== -->
-    <section id="features" class="py-20 lg:py-28 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" class="py-20 lg:py-28 bg-white relative overflow-hidden">
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="text-center mb-16 fade-up">
-                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">Features</h2>
-                <p class="mt-4 text-lg text-gray-500">Everything you need to understand your finances</p>
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium mb-4 border border-indigo-100">
+                    <i class="fas fa-layer-group"></i>
+                    Comprehensive Toolkit
+                </div>
+                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">Everything you need</h2>
+                <p class="mt-6 text-lg text-gray-500 max-w-2xl mx-auto">From logging a quick cash expense to deep AI-driven behavioral analysis, Kipta handles your entire financial lifecycle.</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                <!-- Feature 1 -->
-                <div
-                    class="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-indigo-100 hover:shadow-lg transition-all fade-up">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-100 transition-colors">
-                        <i class="fas fa-file-pdf text-xl"></i>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+                <!-- 1. Daily Expenses -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-blue-200 hover:shadow-[0_8px_30px_rgb(59,130,246,0.12)] transition-all duration-300 fade-up hover:-translate-y-1">
+                    <div class="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-wallet text-2xl"></i>
                     </div>
-                    <h3 class="mt-6 text-xl font-bold text-gray-900">AI Statement Processing</h3>
-                    <p class="mt-3 text-gray-500 leading-relaxed">Convert PDF statements into structured
-                        financial data.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Daily Expenses</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">Log cash, bKash, and card payments in seconds. AI instantly categorizes them on the fly.</p>
                 </div>
-                <!-- Feature 2 -->
-                <div
-                    class="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-purple-100 hover:shadow-lg transition-all fade-up">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-100 transition-colors">
-                        <i class="fas fa-tags text-xl"></i>
+
+                <!-- 2. Income Tracking -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-emerald-200 hover:shadow-[0_8px_30px_rgb(16,185,129,0.12)] transition-all duration-300 fade-up hover:-translate-y-1" style="transition-delay: 50ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-arrow-trend-up text-2xl"></i>
                     </div>
-                    <h3 class="mt-6 text-xl font-bold text-gray-900">Automatic Categorization</h3>
-                    <p class="mt-3 text-gray-500 leading-relaxed">Transactions are organized into clear
-                        categories without manual work.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Income Tracking</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">Monitor your salary, freelance gigs, and side incomes to see exactly how much you're truly bringing in.</p>
                 </div>
-                <!-- Feature 3 -->
-                <div
-                    class="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-green-100 hover:shadow-lg transition-all fade-up">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center text-green-600 group-hover:bg-green-100 transition-colors">
-                        <i class="fas fa-tachometer-alt text-xl"></i>
+
+                <!-- 3. Liability Management -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-rose-200 hover:shadow-[0_8px_30px_rgb(244,63,94,0.12)] transition-all duration-300 fade-up hover:-translate-y-1" style="transition-delay: 100ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-file-invoice-dollar text-2xl"></i>
                     </div>
-                    <h3 class="mt-6 text-xl font-bold text-gray-900">Financial Dashboard</h3>
-                    <p class="mt-3 text-gray-500 leading-relaxed">A simple overview of income, expenses, and
-                        trends over time.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Liability Management</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">Keep tight control over loans, credit card dues, and EMIs. Never miss a payment or let debt sneak up on you.</p>
                 </div>
-                <!-- Feature 4 -->
-                <div
-                    class="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-pink-100 hover:shadow-lg transition-all fade-up">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-pink-50 flex items-center justify-center text-pink-600 group-hover:bg-pink-100 transition-colors">
-                        <i class="fas fa-chart-line text-xl"></i>
+
+                <!-- 4. AI Statement Parsing -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-indigo-200 hover:shadow-[0_8px_30px_rgb(99,102,241,0.12)] transition-all duration-300 fade-up hover:-translate-y-1" style="transition-delay: 150ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-file-pdf text-2xl"></i>
                     </div>
-                    <h3 class="mt-6 text-xl font-bold text-gray-900">AI Reports</h3>
-                    <p class="mt-3 text-gray-500 leading-relaxed">Periodic summaries that explain your
-                        financial behavior.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">AI Statement Parsing</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">Upload messy bank PDFs. Our AI perfectly extracts, cleans, and structures every transaction automatically.</p>
                 </div>
-                <!-- Feature 5 -->
-                <div
-                    class="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-amber-100 hover:shadow-lg transition-all fade-up">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-100 transition-colors">
-                        <i class="fas fa-robot text-xl"></i>
+
+                <!-- 5. Smart Categorization -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-purple-200 hover:shadow-[0_8px_30px_rgb(168,85,247,0.12)] transition-all duration-300 fade-up hover:-translate-y-1" style="transition-delay: 200ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-tags text-2xl"></i>
                     </div>
-                    <h3 class="mt-6 text-xl font-bold text-gray-900">AI Advisor</h3>
-                    <p class="mt-3 text-gray-500 leading-relaxed">Ask questions and explore your financial data
-                        in more depth.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Smart Categorization</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">Transactions are seamlessly tagged into clean categories. No more manual spreadsheets or guessing.</p>
                 </div>
-                <!-- Feature 6 -->
-                <div
-                    class="group bg-white rounded-2xl p-8 border border-gray-100 hover:border-cyan-100 hover:shadow-lg transition-all fade-up">
-                    <div
-                        class="w-12 h-12 rounded-xl bg-cyan-50 flex items-center justify-center text-cyan-600 group-hover:bg-cyan-100 transition-colors">
-                        <i class="fas fa-wallet text-xl"></i>
+
+                <!-- 6. Deep AI Reports -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-pink-200 hover:shadow-[0_8px_30px_rgb(236,72,153,0.12)] transition-all duration-300 fade-up hover:-translate-y-1" style="transition-delay: 250ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-pink-50 flex items-center justify-center text-pink-600 group-hover:bg-pink-600 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-chart-pie text-2xl"></i>
                     </div>
-                    <h3 class="mt-6 text-xl font-bold text-gray-900">Expense &amp; Income Tracking</h3>
-                    <p class="mt-3 text-gray-500 leading-relaxed">Track daily cash expenses and income alongside
-                        your digital transactions.</p>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Deep AI Reports</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">Interactive monthly report cards showing lifestyle creep, savings rates, and no-spend streaks.</p>
+                </div>
+
+                <!-- 7. Unified Dashboard -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-teal-200 hover:shadow-[0_8px_30px_rgb(20,184,166,0.12)] transition-all duration-300 fade-up hover:-translate-y-1" style="transition-delay: 300ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-teal-50 flex items-center justify-center text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-border-all text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Unified Dashboard</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">See your total wealth, recent transactions, and top merchants at a single glance in a beautiful interface.</p>
+                </div>
+
+                <!-- 8. Personal AI Advisor -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-amber-200 hover:shadow-[0_8px_30px_rgb(245,158,11,0.12)] transition-all duration-300 fade-up hover:-translate-y-1" style="transition-delay: 350ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-robot text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Personal AI Advisor</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">Get tailored advice on cutting costs, avoiding risks, and identifying your unique money personality.</p>
+                </div>
+
+                <!-- 9. Zero-Knowledge Security -->
+                <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-slate-300 hover:shadow-[0_8px_30px_rgb(15,23,42,0.12)] transition-all duration-300 fade-up hover:-translate-y-1" style="transition-delay: 400ms;">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-700 group-hover:bg-slate-800 group-hover:text-white transition-colors duration-300 mb-6 shadow-sm">
+                        <i class="fas fa-shield-halved text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">Zero-Knowledge Security</h3>
+                    <p class="text-gray-500 leading-relaxed text-sm">Application-layer encryption means your financial data is completely invisible, even to our own system administrators.</p>
                 </div>
             </div>
         </div>
@@ -1504,47 +1581,6 @@
         </div>
     </section>
 
-    <!-- ===================== PRIVACY ===================== -->
-    <section class="py-20 lg:py-28 bg-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center mb-16 fade-up">
-                <div
-                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 text-green-700 text-sm font-medium mb-4">
-                    <i class="fas fa-shield-alt"></i>
-                    Privacy
-                </div>
-                <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">Designed with control in mind
-                </h2>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-                <div class="text-center fade-up">
-                    <div
-                        class="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 mx-auto">
-                        <i class="fas fa-ban text-2xl"></i>
-                    </div>
-                    <h3 class="mt-5 text-lg font-bold text-gray-900">Not sold or shared</h3>
-                    <p class="mt-2 text-gray-500">Your data is never sold or shared with third parties.</p>
-                </div>
-                <div class="text-center fade-up">
-                    <div
-                        class="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 mx-auto">
-                        <i class="fas fa-server text-2xl"></i>
-                    </div>
-                    <h3 class="mt-5 text-lg font-bold text-gray-900">Self-hosting supported</h3>
-                    <p class="mt-2 text-gray-500">Run Kipta App on your own infrastructure if you prefer.</p>
-                </div>
-                <div class="text-center fade-up">
-                    <div
-                        class="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 mx-auto">
-                        <i class="fas fa-user-shield text-2xl"></i>
-                    </div>
-                    <h3 class="mt-5 text-lg font-bold text-gray-900">You stay in control</h3>
-                    <p class="mt-2 text-gray-500">You remain in control of your financial information at all
-                        times.</p>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <!-- ===================== BUILT FOR REAL-WORLD DATA ===================== -->
     <section class="py-20 lg:py-28 bg-slate-50">
@@ -1795,6 +1831,143 @@
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/static/sw.js');
+        }
+    </script>
+
+    <!-- Security Modal -->
+    <div id="securityModal" class="fixed inset-0 z-[100] hidden overflow-y-auto">
+        <!-- Backdrop -->
+        <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity opacity-0" id="securityModalBackdrop" onclick="closeSecurityModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0 py-12">
+            <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-2xl w-full border border-gray-100 opacity-0 translate-y-4 duration-300" id="securityModalPanel">
+                
+                <div class="absolute top-0 right-0 pt-4 pr-4">
+                    <button type="button" onclick="closeSecurityModal()" class="text-gray-400 hover:text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <div class="px-6 py-8 sm:p-10">
+                    <div class="mb-8 text-center">
+                        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-shield-halved text-3xl"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-gray-900">Complete Transparency.<br>Absolute Security.</h3>
+                    </div>
+
+                    <div class="space-y-8">
+                        <div>
+                            <h4 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <i class="fas fa-list-check text-indigo-500"></i> What Exactly is Encrypted?
+                            </h4>
+                            <p class="text-sm text-gray-600 mb-4">We don't just encrypt passwords; we encrypt your entire financial identity:</p>
+                            <ul class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <li class="flex items-start gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                    <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                    <span class="text-sm text-gray-700"><strong>Your Identity:</strong> Name, Email, Account Nicknames</span>
+                                </li>
+                                <li class="flex items-start gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                    <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                    <span class="text-sm text-gray-700"><strong>Your Wealth:</strong> Balances, Limits, Available Credit</span>
+                                </li>
+                                <li class="flex items-start gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                    <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                    <span class="text-sm text-gray-700"><strong>Your Footprint:</strong> Transactions, Merchants, Rules</span>
+                                </li>
+                                <li class="flex items-start gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                    <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                    <span class="text-sm text-gray-700"><strong>Your Documents:</strong> Filenames and PDF Passwords</span>
+                                </li>
+                                <li class="flex items-start gap-2 bg-gray-50 p-3 rounded-lg border border-gray-100 sm:col-span-2">
+                                    <i class="fas fa-check-circle text-emerald-500 mt-0.5"></i>
+                                    <span class="text-sm text-gray-700"><strong>Your AI Insights:</strong> Raw financial analyses and advisor reports</span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <i class="fas fa-microchip text-indigo-500"></i> How Does It Work?
+                            </h4>
+                            <div class="space-y-4">
+                                <div class="flex gap-4">
+                                    <div class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                                        <i class="fas fa-layer-group text-indigo-600"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">Application-Layer Encryption</h5>
+                                        <p class="text-sm text-gray-600 mt-1">Unlike standard databases that only encrypt the hard drive, we encrypt your specific data fields <em>before</em> they are ever saved.</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-10 h-10 rounded-full bg-purple-50 flex items-center justify-center shrink-0">
+                                        <i class="fas fa-key text-purple-600"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">AES-256 Grade Security</h5>
+                                        <p class="text-sm text-gray-600 mt-1">We use the same cryptographic algorithms trusted by governments and top-tier financial institutions worldwide.</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+                                        <i class="fas fa-hashtag text-amber-600"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">Salted & Peppered Hashes</h5>
+                                        <p class="text-sm text-gray-600 mt-1">We use advanced cryptographic hashing (SHA-256) with unique "peppers" to ensure predictable data cannot be reverse-engineered.</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-4">
+                                    <div class="w-10 h-10 rounded-full bg-cyan-50 flex items-center justify-center shrink-0">
+                                        <i class="fas fa-eye-slash text-cyan-600"></i>
+                                    </div>
+                                    <div>
+                                        <h5 class="font-semibold text-gray-900">Zero-Knowledge Architecture</h5>
+                                        <p class="text-sm text-gray-600 mt-1">Because decryption happens at the application layer when you log in, our database administrators and support staff physically cannot read your sensitive information.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-6 py-4 flex justify-end rounded-b-2xl border-t border-gray-100">
+                    <button type="button" onclick="closeSecurityModal()" class="px-6 py-2 bg-white border border-gray-300 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function openSecurityModal() {
+            const modal = document.getElementById('securityModal');
+            const backdrop = document.getElementById('securityModalBackdrop');
+            const panel = document.getElementById('securityModalPanel');
+            
+            modal.classList.remove('hidden');
+            // Small delay to allow display block to apply before animating opacity/transform
+            setTimeout(() => {
+                backdrop.classList.remove('opacity-0');
+                panel.classList.remove('opacity-0', 'translate-y-4');
+                panel.classList.add('opacity-100', 'translate-y-0');
+            }, 10);
+        }
+
+        function closeSecurityModal() {
+            const modal = document.getElementById('securityModal');
+            const backdrop = document.getElementById('securityModalBackdrop');
+            const panel = document.getElementById('securityModalPanel');
+            
+            backdrop.classList.add('opacity-0');
+            panel.classList.remove('opacity-100', 'translate-y-0');
+            panel.classList.add('opacity-0', 'translate-y-4');
+            
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
         }
     </script>
 </body>
