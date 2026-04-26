@@ -7,6 +7,7 @@ from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey, I
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from app.database import Base
+from app.utils.encryption import EncryptedString
 
 
 class PasswordResetToken(Base):
@@ -18,7 +19,9 @@ class PasswordResetToken(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
 
     # The secure token (256-bit entropy via secrets.token_urlsafe(32))
-    token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    token: Mapped[str] = mapped_column(EncryptedString(64), nullable=False)
+    # Hashed token for lookup (peppered SHA-256)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
 
     # User this token belongs to
     user_id: Mapped[int] = mapped_column(

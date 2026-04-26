@@ -150,6 +150,9 @@ async def create_account(
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=400, detail="Account already registered")
 
+    # Extract last 4 digits for plaintext matching column
+    card_last_four = body.account_number_masked.replace("*", "").replace("-", "").replace(" ", "")[-4:]
+
     account = Account(
         uuid=str(uuid.uuid4()),
         user_id=current_user.id,
@@ -157,6 +160,7 @@ async def create_account(
         account_type=body.account_type,
         account_number_masked=body.account_number_masked,
         account_number_hash=account_hash,
+        card_last_four=card_last_four,
         cardholder_name=body.cardholder_name,
         account_nickname=body.account_nickname,
         card_network=body.card_network,

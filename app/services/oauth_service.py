@@ -14,6 +14,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.models import User
+from app.utils.encryption import hash_value
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +98,7 @@ async def get_or_create_google_user(
 
     # Check if user already exists
     result = await db.execute(
-        select(User).where(User.email == email)
+        select(User).where(User.email_hash == hash_value(email.lower()))
     )
     user = result.scalar_one_or_none()
 
@@ -114,6 +115,7 @@ async def get_or_create_google_user(
         new_user = User(
             uuid=str(uuid.uuid4()),
             email=email,
+            email_hash=hash_value(email.lower()),
             full_name=google_user_info.get('name'),
             # Google users don't have a password in our system
             # Set a random unguessable hash that can never be used to login via password

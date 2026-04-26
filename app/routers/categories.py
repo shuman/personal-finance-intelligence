@@ -130,7 +130,7 @@ async def update_rule(
 
     if body.merchant_pattern is not None:
         rule.merchant_pattern = body.merchant_pattern
-        rule.normalized_merchant = body.merchant_pattern.lower().strip()
+        rule.normalized_merchant = CategoryEngine.normalize(body.merchant_pattern)
     if body.category is not None:
         rule.category = body.category
     if body.subcategory is not None:

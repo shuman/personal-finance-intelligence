@@ -13,6 +13,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.dialects.sqlite import JSON
 from app.database import Base
+from app.utils.encryption import EncryptedString, EncryptedText, EncryptedJSON, EncryptedNumeric
 
 
 # ---------------------------------------------------------------------------
@@ -30,11 +31,12 @@ class User(Base):
     uuid: Mapped[str] = mapped_column(String(36), unique=True, nullable=False, index=True)
 
     # Authentication
-    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(EncryptedString(255), nullable=False, index=True)
+    email_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
 
     # Profile
-    full_name: Mapped[Optional[str]] = mapped_column(String(200))
+    full_name: Mapped[Optional[str]] = mapped_column(EncryptedString(200))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
@@ -139,11 +141,13 @@ class Account(Base):
     account_type: Mapped[str] = mapped_column(
         String(20), nullable=False, default="credit_card"
     )  # credit_card | debit_card | savings | current | mfs
-    account_number_masked: Mapped[str] = mapped_column(String(30), nullable=False)
+    account_number_masked: Mapped[str] = mapped_column(EncryptedString(30), nullable=False)
     # SHA-256 of the full account number — for dedup without storing full number
     account_number_hash: Mapped[Optional[str]] = mapped_column(String(64), unique=True, index=True)
+    # Last 4 digits in plaintext for account matching during import
+    card_last_four: Mapped[Optional[str]] = mapped_column(String(4), index=True)
     cardholder_name: Mapped[Optional[str]] = mapped_column(String(200))
-    account_nickname: Mapped[Optional[str]] = mapped_column(String(100))
+    account_nickname: Mapped[Optional[str]] = mapped_column(EncryptedString(100))
 
     # Card-specific (NULL for plain bank accounts)
     card_network: Mapped[Optional[str]] = mapped_column(String(20))  # AMEX | VISA | MASTERCARD
@@ -269,7 +273,7 @@ class AiExtraction(Base):
     # Pages where Claude flagged uncertainty
     issues_flagged: Mapped[Optional[dict]] = mapped_column(JSON)
     # Full JSON-safe parsed_data dict — the cache payload
-    raw_response: Mapped[Optional[dict]] = mapped_column(JSON)
+    raw_response: Mapped[Optional[dict]] = mapped_column(EncryptedJSON)
 
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
 
@@ -488,16 +492,17 @@ class Statement(Base):
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # File Information
-    filename: Mapped[str] = mapped_column(String(500), unique=True, nullable=False, index=True)
+    filename: Mapped[str] = mapped_column(EncryptedString(500), nullable=False)
+    filename_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
     pdf_hash: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
-    password: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    password: Mapped[Optional[str]] = mapped_column(EncryptedString(200), nullable=True)
 
     # Bank & Account Information
     bank_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
-    account_number: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    account_number: Mapped[str] = mapped_column(EncryptedString(20), nullable=False)
     card_type: Mapped[Optional[str]] = mapped_column(String(50))
-    cardholder_name: Mapped[Optional[str]] = mapped_column(String(200))
+    cardholder_name: Mapped[Optional[str]] = mapped_column(EncryptedString(200))
     member_since: Mapped[Optional[int]] = mapped_column(Integer)
 
     # NEW: FK to accounts table (nullable during migration period)
@@ -528,16 +533,16 @@ class Statement(Base):
     fees_charged: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
     interest_charged: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
     adjustments: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
-    new_balance: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
+    new_balance: Mapped[Optional[Decimal]] = mapped_column(EncryptedNumeric)
 
     # Payment Information
     total_amount_due: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
     minimum_payment_due: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
 
     # Credit Information
-    credit_limit: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
-    available_credit: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
-    cash_advance_limit: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
+    credit_limit: Mapped[Optional[Decimal]] = mapped_column(EncryptedNumeric)
+    available_credit: Mapped[Optional[Decimal]] = mapped_column(EncryptedNumeric)
+    cash_advance_limit: Mapped[Optional[Decimal]] = mapped_column(EncryptedNumeric)
     credit_utilization_pct: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2))
 
     # Rewards/Points (summary on statement level)
@@ -581,9 +586,7 @@ class Statement(Base):
         "AiExtraction", back_populates="statement"
     )
 
-    __table_args__ = (
-        Index("idx_statement_account_date", "account_number", "statement_date"),
-    )
+    __table_args__ = ()
 
     def __repr__(self):
         return f"<Statement(id={self.id}, bank={self.bank_name}, date={self.statement_date})>"
@@ -618,18 +621,19 @@ class Transaction(Base):
     )
 
     # Account Reference (kept for backward compat)
-    account_number: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    account_number: Mapped[str] = mapped_column(EncryptedString(20), nullable=False)
 
     # Transaction Dates
     transaction_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     posting_date: Mapped[Optional[date]] = mapped_column(Date)
 
     # Description
-    description_raw: Mapped[str] = mapped_column(Text, nullable=False)
-    description_cleaned: Mapped[Optional[str]] = mapped_column(Text)
+    description_raw: Mapped[str] = mapped_column(EncryptedText, nullable=False)
+    description_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    description_cleaned: Mapped[Optional[str]] = mapped_column(EncryptedText)
 
     # Merchant Information
-    merchant_name: Mapped[Optional[str]] = mapped_column(String(200), index=True)
+    merchant_name: Mapped[Optional[str]] = mapped_column(EncryptedString(200))
     merchant_category: Mapped[Optional[str]] = mapped_column(String(100), index=True)
     merchant_city: Mapped[Optional[str]] = mapped_column(String(100))
     merchant_state: Mapped[Optional[str]] = mapped_column(String(100))
@@ -661,9 +665,9 @@ class Transaction(Base):
     debit_credit: Mapped[str] = mapped_column(String(1))  # D or C
 
     # Reference Information
-    reference_number: Mapped[Optional[str]] = mapped_column(String(100), index=True)
-    authorization_code: Mapped[Optional[str]] = mapped_column(String(50))
-    card_last_four: Mapped[Optional[str]] = mapped_column(String(4))
+    reference_number: Mapped[Optional[str]] = mapped_column(EncryptedString(100))
+    authorization_code: Mapped[Optional[str]] = mapped_column(EncryptedString(50))
+    card_last_four: Mapped[Optional[str]] = mapped_column(EncryptedString(4))
 
     # Transaction Flags
     is_international: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -715,11 +719,10 @@ class Transaction(Base):
 
     __table_args__ = (
         UniqueConstraint(
-            "statement_id", "transaction_date", "description_raw", "amount",
+            "statement_id", "transaction_date", "description_hash", "amount",
             name="uq_transaction_duplicate"
         ),
         CheckConstraint("debit_credit IN ('D', 'C')", name="ck_transaction_debit_credit"),
-        Index("idx_transaction_merchant", "merchant_name", "merchant_category"),
         Index("idx_transaction_date_amount", "transaction_date", "amount"),
         Index("idx_transaction_category_ai", "category_ai"),
     )
@@ -742,7 +745,7 @@ class Fee(Base):
     statement_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("statements.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    account_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    account_number: Mapped[str] = mapped_column(EncryptedString(20), nullable=False)
 
     fee_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     fee_type: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
@@ -782,7 +785,7 @@ class InterestCharge(Base):
     statement_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("statements.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    account_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    account_number: Mapped[str] = mapped_column(EncryptedString(20), nullable=False)
 
     interest_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
 
@@ -825,7 +828,7 @@ class RewardsSummary(Base):
         nullable=False, unique=True, index=True
     )
 
-    account_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    account_number: Mapped[str] = mapped_column(EncryptedString(20), nullable=False)
     statement_date: Mapped[date] = mapped_column(Date, nullable=False)
 
     # NEW: Reward program metadata
@@ -885,7 +888,7 @@ class CategorySummary(Base):
     statement_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("statements.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    account_number: Mapped[str] = mapped_column(String(20), nullable=False)
+    account_number: Mapped[str] = mapped_column(EncryptedString(20), nullable=False)
 
     category_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     subcategory_name: Mapped[Optional[str]] = mapped_column(String(100))
@@ -926,7 +929,7 @@ class Payment(Base):
     statement_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("statements.id", ondelete="SET NULL"), index=True
     )
-    account_number: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
+    account_number: Mapped[str] = mapped_column(EncryptedString(20), nullable=False)
 
     payment_date: Mapped[date] = mapped_column(Date, nullable=False, index=True)
     payment_amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
@@ -969,8 +972,8 @@ class DailyExpense(Base):
     currency: Mapped[str] = mapped_column(String(3), default="BDT")
 
     # Description
-    description_raw: Mapped[str] = mapped_column(String(500), nullable=False)
-    description_normalized: Mapped[Optional[str]] = mapped_column(String(500))
+    description_raw: Mapped[str] = mapped_column(EncryptedString(500), nullable=False)
+    description_normalized: Mapped[Optional[str]] = mapped_column(EncryptedString(500))
 
     # AI-enhanced categorization
     category: Mapped[Optional[str]] = mapped_column(String(100), index=True)
@@ -999,7 +1002,7 @@ class DailyExpense(Base):
     user: Mapped["User"] = relationship("User", back_populates="daily_expenses")
 
     def __repr__(self):
-        return f"<DailyExpense(id={self.id}, amount={self.amount}, desc={self.description_raw[:30]}, status={self.ai_status})>"
+        return f"<DailyExpense(id={self.id}, amount={self.amount}, status={self.ai_status})>"
 
 
 # ---------------------------------------------------------------------------
@@ -1022,8 +1025,8 @@ class DailyIncome(Base):
     currency: Mapped[str] = mapped_column(String(3), default="BDT")
 
     # Description
-    description_raw: Mapped[str] = mapped_column(String(500), nullable=False)
-    description_normalized: Mapped[Optional[str]] = mapped_column(String(500))
+    description_raw: Mapped[str] = mapped_column(EncryptedString(500), nullable=False)
+    description_normalized: Mapped[Optional[str]] = mapped_column(EncryptedString(500))
 
     # Income source type
     source_type: Mapped[Optional[str]] = mapped_column(String(50), index=True)

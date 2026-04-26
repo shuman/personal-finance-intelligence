@@ -291,7 +291,7 @@ class DataNormalizer:
         result = await self.db.execute(
             select(Account).where(
                 Account.user_id == user_id,
-                Account.account_number_masked.contains(last_four),
+                Account.card_last_four == last_four,
                 Account.is_active == True,
             )
         )
@@ -317,6 +317,7 @@ class DataNormalizer:
             institution_id=institution_id,
             account_type="credit_card",
             account_number_masked=card_number_masked,
+            card_last_four=last_four,
             cardholder_name=cardholder_name.title() if cardholder_name else None,
             account_nickname=nickname,
             card_network=network,

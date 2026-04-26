@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import List, Optional
 
 from app.database import Base
+from app.utils.encryption import EncryptedString
 
 
 class LiabilityTemplate(Base):
@@ -15,7 +16,7 @@ class LiabilityTemplate(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     uuid: Mapped[str] = mapped_column(String(36), unique=True, nullable=False, index=True)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    name: Mapped[str] = mapped_column(EncryptedString(200), nullable=False)
     default_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
     priority: Mapped[str] = mapped_column(String(20), default="Primary") # Primary, Secondary, Optional
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -62,12 +63,12 @@ class MonthlyLiability(Base):
         Integer, ForeignKey("liability_templates.id", ondelete="SET NULL"), nullable=True
     )
 
-    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    name: Mapped[str] = mapped_column(EncryptedString(200), nullable=False)
     priority: Mapped[str] = mapped_column(String(20), default="Primary")
     amount: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
-    status: Mapped[str] = mapped_column(String(20), default="Unpaid") # Unpaid, Paid, Partially Paid
+    status: Mapped[str] = mapped_column(EncryptedString(20), default="Unpaid") # Unpaid, Paid, Partially Paid
     paid_amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(15, 2))
     paid_date: Mapped[Optional[date]] = mapped_column(Date)
 

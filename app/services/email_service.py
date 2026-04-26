@@ -16,6 +16,7 @@ from sqlalchemy import select, delete
 from app.config import settings
 from app.models.password_reset import PasswordResetToken
 from app.models import User
+from app.utils.encryption import hash_value
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ async def create_password_reset_token(db: AsyncSession, user: User) -> str:
     # Save to database
     reset_token = PasswordResetToken(
         token=token,
+        token_hash=hash_value(token),
         user_id=user.id,
         expires_at=expires_at
     )
@@ -80,12 +82,12 @@ async def verify_reset_token(db: AsyncSession, token: str) -> Optional[User]:
     """
     result = await db.execute(
         select(PasswordResetToken)
-        .where(PasswordResetToken.token == token)
+        .where(PasswordResetToken.token_hash == hash_value(token))
     )
     reset_token = result.scalar_one_or_none()
 
     if not reset_token:
-        logger.warning(f"Password reset token not found: {token[:10]}...")
+        logger.warning("Password reset token not found")
         return None
 
     if not reset_token.is_valid():
@@ -105,7 +107,7 @@ async def mark_token_as_used(db: AsyncSession, token: str) -> None:
     """
     result = await db.execute(
         select(PasswordResetToken)
-        .where(PasswordResetToken.token == token)
+        .where(PasswordResetToken.token_hash == hash_value(token))
     )
     reset_token = result.scalar_one_or_none()
 

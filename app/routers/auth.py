@@ -16,6 +16,7 @@ from app.utils.auth import verify_password, create_access_token, decode_access_t
 from app.config import settings
 from app.services.email_service import create_password_reset_token, verify_reset_token, mark_token_as_used, send_password_reset_email
 from app.services.oauth_service import verify_google_token, get_or_create_google_user
+from app.utils.encryption import hash_value
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
 
@@ -91,8 +92,8 @@ class ConsentRequest(BaseModel):
 # ---- Helper Functions ----
 
 async def get_user_by_email(db: AsyncSession, email: str) -> Optional[User]:
-    """Get user by email"""
-    result = await db.execute(select(User).where(User.email == email))
+    """Get user by email (looks up via email_hash for encrypted email column)"""
+    result = await db.execute(select(User).where(User.email_hash == hash_value(email.lower())))
     return result.scalar_one_or_none()
 
 
@@ -355,6 +356,7 @@ async def signup(
     new_user = User(
         uuid=str(uuid.uuid4()),
         email=signup_data.email,
+        email_hash=hash_value(signup_data.email.lower()),
         hashed_password=get_password_hash(signup_data.password),
         full_name=signup_data.full_name,
         is_active=True,

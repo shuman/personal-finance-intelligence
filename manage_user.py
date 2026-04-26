@@ -12,6 +12,7 @@ from sqlalchemy import select
 from app.database import AsyncSessionLocal
 from app.models import User
 from app.utils.auth import get_password_hash
+from app.utils.encryption import hash_value
 
 
 def _validate_password(password: str) -> None:
@@ -23,7 +24,7 @@ async def create_user(email: str, password: str, full_name: str | None, is_admin
     _validate_password(password)
 
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(User).where(User.email == email))
+        result = await db.execute(select(User).where(User.email_hash == hash_value(email.lower())))
         existing = result.scalar_one_or_none()
         if existing:
             raise ValueError(f"User already exists: {email}")
@@ -31,6 +32,7 @@ async def create_user(email: str, password: str, full_name: str | None, is_admin
         user = User(
             uuid=str(uuid.uuid4()),
             email=email,
+            email_hash=hash_value(email.lower()),
             hashed_password=get_password_hash(password),
             full_name=full_name,
             is_active=True,
@@ -48,7 +50,7 @@ async def set_password(email: str, password: str) -> None:
     _validate_password(password)
 
     async with AsyncSessionLocal() as db:
-        result = await db.execute(select(User).where(User.email == email))
+        result = await db.execute(select(User).where(User.email_hash == hash_value(email.lower())))
         user = result.scalar_one_or_none()
         if not user:
             raise ValueError(f"User not found: {email}")

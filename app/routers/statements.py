@@ -196,7 +196,7 @@ async def get_transactions(
     if not statement:
         raise HTTPException(status_code=404, detail="Statement not found")
 
-    transactions = await service.get_transactions(
+    transactions, _ = await service.get_transactions(
         statement_id=statement_id,
         user_id=current_user.id,
         category=category,
@@ -273,7 +273,7 @@ async def export_transactions_csv(
         raise HTTPException(status_code=404, detail="Statement not found")
 
     # Get all transactions
-    transactions = await service.get_transactions(statement_id, user_id=current_user.id, limit=10000)
+    transactions, _ = await service.get_transactions(statement_id, user_id=current_user.id, limit=10000)
 
     # Create CSV in memory
     output = io.StringIO()
@@ -526,7 +526,7 @@ async def search_transactions(
         Statement.filename.label('statement_filename')
     ).join(Statement, Transaction.statement_id == Statement.id).where(Transaction.user_id == current_user.id)
 
-    # Apply filters
+    # Apply filters (description filter done in Python since field is encrypted)
     conditions = []
 
     if date:
@@ -536,9 +536,6 @@ async def search_transactions(
             conditions.append(Transaction.transaction_date == date_obj)
         except:
             pass
-
-    if description:
-        conditions.append(Transaction.description_raw.ilike(f'%{description}%'))
 
     if amount is not None:
         conditions.append(Transaction.amount == amount)
@@ -554,6 +551,14 @@ async def search_transactions(
 
     result = await db.execute(query)
     transactions = result.all()
+
+    # Filter by description in Python (field is encrypted)
+    if description:
+        desc_lower = description.lower()
+        transactions = [
+            txn for txn in transactions
+            if txn.description_raw and desc_lower in txn.description_raw.lower()
+        ]
 
     # Convert to dict
     return [
@@ -605,8 +610,6 @@ async def export_transactions_csv(
             conditions.append(Transaction.transaction_date == date_obj)
         except:
             pass
-    if description:
-        conditions.append(Transaction.description_raw.ilike(f'%{description}%'))
     if amount is not None:
         conditions.append(Transaction.amount == amount)
     if category:
@@ -619,6 +622,14 @@ async def export_transactions_csv(
 
     result = await db.execute(query)
     transactions = result.all()
+
+    # Filter by description in Python (field is encrypted)
+    if description:
+        desc_lower = description.lower()
+        transactions = [
+            txn for txn in transactions
+            if txn.description_raw and desc_lower in txn.description_raw.lower()
+        ]
 
     # Create CSV
     output = io.StringIO()

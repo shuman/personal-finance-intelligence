@@ -27,6 +27,7 @@ from app.models import (
 from app.parsers import ParserFactory, AmexParser
 from app.config import settings
 from app.utils.categorization import calculate_category_summary
+from app.utils.encryption import hash_value
 
 logger = logging.getLogger(__name__)
 
@@ -274,6 +275,7 @@ class StatementService:
 
             # Update statement fields
             statement.filename = filename
+            statement.filename_hash = hash_value(filename)
             statement.pdf_hash = file_hash
             statement.file_path = file_path
             statement.password = password
@@ -290,6 +292,7 @@ class StatementService:
             statement = Statement(
                 uuid=str(uuid.uuid4()),
                 filename=filename,
+                filename_hash=hash_value(filename),
                 pdf_hash=file_hash,
                 file_path=file_path,
                 password=password,
@@ -326,6 +329,10 @@ class StatementService:
             txn_account_id = txn_data.get("account_id") or account_id
             txn_account_number = txn_data.get("account_number") or statement.account_number
             txn_fields = {k: v for k, v in txn_data.items() if k not in ("account_number", "statement_id", "account_id")}
+            # Populate description_hash for the unique constraint
+            desc_raw = txn_fields.get("description_raw", "")
+            if desc_raw:
+                txn_fields["description_hash"] = hash_value(desc_raw)
             transaction = Transaction(
                 uuid=str(uuid.uuid4()),
                 statement_id=statement.id,
@@ -366,6 +373,7 @@ class StatementService:
                 if fee_data.get("amount"):
                     fee_data["amount"] = Decimal(str(fee_data["amount"]))
                 fee = Fee(
+                    uuid=str(uuid.uuid4()),
                     statement_id=statement.id,
                     account_number=statement.account_number,
                     fee_date=statement.statement_date,
@@ -714,6 +722,7 @@ class StatementService:
 
             # Update statement fields
             statement.filename = filename
+            statement.filename_hash = hash_value(filename)
             statement.pdf_hash = file_hash
             statement.file_path = file_path
             statement.password = password
@@ -731,6 +740,7 @@ class StatementService:
                 uuid=str(uuid.uuid4()),
                 user_id=user_id,
                 filename=filename,
+                filename_hash=hash_value(filename),
                 pdf_hash=file_hash,
                 file_path=file_path,
                 password=password,
@@ -760,6 +770,10 @@ class StatementService:
             txn_account_number = txn_data.get("account_number") or statement.account_number
 
             txn_fields = {k: v for k, v in txn_data.items() if k not in ("account_number", "statement_id", "account_id")}
+            # Populate description_hash for the unique constraint
+            desc_raw = txn_fields.get("description_raw", "")
+            if desc_raw:
+                txn_fields["description_hash"] = hash_value(desc_raw)
 
             txn = Transaction(
                 uuid=str(uuid.uuid4()),
@@ -973,15 +987,16 @@ class StatementService:
     async def _check_duplicate_filename(self, filename: str, user_id: int = None, account_id: int = None) -> Optional[Statement]:
         """Find a statement by filename for the current user, including soft-deleted variants.
 
+        Uses filename_hash for lookup since filename is now encrypted.
         Scoped to user_id.  If account_id is provided, prefers a match on
         the same account so the same file can be uploaded for different
         accounts.
         """
-        conditions = or_(
-            Statement.filename == filename,
-            Statement.filename.like(f"__deleted__%\\_\\_{filename}"),
+        fn_hash = hash_value(filename)
+        query = select(Statement).where(
+            Statement.filename_hash == fn_hash,
+            Statement.user_id == user_id,
         )
-        query = select(Statement).where(conditions, Statement.user_id == user_id)
         result = await self.db.execute(query)
         rows = result.scalars().all()
         if not rows:
@@ -1045,18 +1060,38 @@ class StatementService:
         merchant: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[Transaction]:
+    ) -> Tuple[List[Transaction], int]:
+        """Fetch transactions for a statement.
+
+        Returns (transactions, total_count).  When a merchant filter is
+        provided, filtering is done in Python because merchant_name is
+        encrypted and can't be queried with SQL LIKE.
+        """
         query = select(Transaction).where(
             Transaction.statement_id == statement_id,
             Transaction.user_id == user_id
         )
         if category:
             query = query.where(Transaction.merchant_category == category)
-        if merchant:
-            query = query.where(Transaction.merchant_name.ilike(f"%{merchant}%"))
-        query = query.order_by(Transaction.transaction_date.desc()).limit(limit).offset(offset)
+
+        if not merchant:
+            # No encrypted-field filter — paginate at DB level
+            query = query.order_by(Transaction.transaction_date.desc()).limit(limit).offset(offset)
+            result = await self.db.execute(query)
+            return list(result.scalars().all()), None  # total unknown when paginated at DB
+
+        # Merchant filter: fetch all matching statement's transactions,
+        # filter in Python, then paginate manually.
+        query = query.order_by(Transaction.transaction_date.desc())
         result = await self.db.execute(query)
-        return list(result.scalars().all())
+        all_txns = list(result.scalars().all())
+
+        # Filter by merchant name in Python (after auto-decryption)
+        merchant_lower = merchant.lower()
+        filtered = [t for t in all_txns if merchant_lower in (t.merchant_name or "").lower()]
+        total = len(filtered)
+        page = filtered[offset:offset + limit]
+        return page, total
 
     async def get_analytics(self, statement_id: int, user_id: int) -> Dict[str, Any]:
         statement = await self.get_statement(statement_id, user_id)

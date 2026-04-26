@@ -557,12 +557,13 @@ Rules:
     # -----------------------------------------------------------------------
 
     def _normalize_description(self, description: str) -> str:
-        """Normalize description for rule matching (lowercase, strip, dedupe spaces)."""
-        import re
-        normalized = description.lower().strip()
-        normalized = re.sub(r"\s+", " ", normalized)  # Dedupe spaces
-        normalized = re.sub(r"[^\w\s]", "", normalized)  # Remove punctuation
-        return normalized[:200]
+        """Normalize description for rule matching.
+
+        Uses CategoryEngine.normalize() to ensure consistency with
+        how rules are looked up during PDF upload categorization.
+        """
+        from app.services.category_engine import CategoryEngine
+        return CategoryEngine.normalize(description)
 
     async def get_statistics(self, user_id: int, date_from: Optional[date] = None, date_to: Optional[date] = None) -> Dict[str, Any]:
         """

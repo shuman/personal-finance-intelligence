@@ -667,9 +667,11 @@ Rules:
             self.db.add(rule)
 
         try:
-            await self.db.flush()
+            async with self.db.begin_nested():
+                await self.db.flush()
         except IntegrityError:
-            await self.db.rollback()
+            # Savepoint rollback — only this rule insert is lost,
+            # the rest of the session (e.g. cached extractions) is safe.
             logger.debug(f"Skipped duplicate category rule for '{normalized}' (source={source})")
 
     async def _upsert_user_override_rule(
@@ -711,13 +713,20 @@ Rules:
             self.db.add(rule)
 
         try:
-            await self.db.flush()
+            async with self.db.begin_nested():
+                await self.db.flush()
         except IntegrityError:
-            await self.db.rollback()
+            # Savepoint rollback — only this rule insert is lost.
             logger.debug(f"Skipped duplicate user_override rule for '{normalized}'")
 
-    def _normalize(self, text: str) -> str:
-        """Normalize merchant name for rule matching."""
+    @staticmethod
+    def normalize(text: str) -> str:
+        """Normalize merchant/description text for rule matching.
+
+        Public static method so all code paths (category engine,
+        categories router, daily expense service) produce identical
+        normalized strings.
+        """
         if not text:
             return ""
         # Lowercase
@@ -736,6 +745,10 @@ Rules:
         # Take first 3 tokens (usually the merchant name before city/country)
         tokens = s.split()
         return " ".join(tokens[:3])
+
+    def _normalize(self, text: str) -> str:
+        """Instance wrapper kept for backward compat."""
+        return self.normalize(text)
 
     def _keyword_fallback(self, normalized: str) -> str:
         """Simple keyword-based fallback (no API call)."""

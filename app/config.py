@@ -110,6 +110,10 @@ class Settings(BaseSettings):
     # Financial defaults
     default_currency: str = "BDT"
 
+    # Encryption (Fernet key for field-level encryption, peppered SHA-256 salt for hash columns)
+    encryption_key: Optional[str] = None
+    hash_salt: Optional[str] = None
+
     # Authentication & Security
     jwt_secret_key: str = "your-secret-key-change-in-production-use-openssl-rand-hex-32"
     jwt_algorithm: str = "HS256"
