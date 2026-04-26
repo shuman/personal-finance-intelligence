@@ -8,6 +8,8 @@ Encrypts 33 sensitive fields across 14 tables using Fernet encryption.
 Adds hash columns for lookup (email_hash, filename_hash, description_hash,
 token_hash) and card_last_four for account matching.
 
+Idempotent: safe to re-run if partially applied.
+
 IMPORTANT: The environment running this migration must have
 ENCRYPTION_KEY and HASH_SALT env vars set.
 """
@@ -58,16 +60,30 @@ def _get_settings():
     return encrypt, hash_val
 
 
-def _safe_drop_index(conn, index_name):
-    """Drop an index if it exists."""
-    conn.execute(text(f"DROP INDEX IF EXISTS {index_name}"))
+def _column_exists(conn, table, column):
+    """Check if a column exists in a table."""
+    result = conn.execute(text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name = :table AND column_name = :column"
+    ), {"table": table, "column": column})
+    return result.fetchone() is not None
 
 
-def _safe_drop_constraint(conn, table_name, constraint_name):
-    """Drop a constraint if it exists."""
-    conn.execute(text(
-        f"ALTER TABLE {table_name} DROP CONSTRAINT IF EXISTS {constraint_name}"
-    ))
+def _index_exists(conn, index_name):
+    """Check if an index exists."""
+    result = conn.execute(text(
+        "SELECT 1 FROM pg_indexes WHERE indexname = :name"
+    ), {"name": index_name})
+    return result.fetchone() is not None
+
+
+def _constraint_exists(conn, table_name, constraint_name):
+    """Check if a constraint exists."""
+    result = conn.execute(text(
+        "SELECT 1 FROM information_schema.table_constraints "
+        "WHERE table_name = :table AND constraint_name = :name"
+    ), {"table": table_name, "name": constraint_name})
+    return result.fetchone() is not None
 
 
 def upgrade() -> None:
@@ -75,15 +91,22 @@ def upgrade() -> None:
     conn = op.get_bind()
 
     # ================================================================
-    # PHASE 1: Add new columns (all nullable initially)
+    # PHASE 1: Add new columns (all nullable initially) — idempotent
     # ================================================================
     logger.info("Phase 1: Adding new columns...")
 
-    op.add_column('users', sa.Column('email_hash', sa.String(64), nullable=True))
-    op.add_column('statements', sa.Column('filename_hash', sa.String(64), nullable=True))
-    op.add_column('transactions', sa.Column('description_hash', sa.String(64), nullable=True))
-    op.add_column('accounts', sa.Column('card_last_four', sa.String(4), nullable=True))
-    op.add_column('password_reset_tokens', sa.Column('token_hash', sa.String(64), nullable=True))
+    new_columns = [
+        ('users', 'email_hash', sa.String(64)),
+        ('statements', 'filename_hash', sa.String(64)),
+        ('transactions', 'description_hash', sa.String(64)),
+        ('accounts', 'card_last_four', sa.String(4)),
+        ('password_reset_tokens', 'token_hash', sa.String(64)),
+    ]
+    for table, column, col_type in new_columns:
+        if not _column_exists(conn, table, column):
+            op.add_column(table, sa.Column(column, col_type, nullable=True))
+        else:
+            logger.info(f"  Column {table}.{column} already exists, skipping")
 
     # ================================================================
     # PHASE 2: Populate hash columns and card_last_four
@@ -134,59 +157,58 @@ def upgrade() -> None:
         )
 
     # ================================================================
-    # PHASE 3: Drop old indexes on columns about to become encrypted,
-    #          set NOT NULL, create new indexes
+    # PHASE 3: Drop old indexes, set NOT NULL, create new indexes — idempotent
     # ================================================================
     logger.info("Phase 3: Updating indexes and constraints...")
 
     # --- users ---
-    # Drop old unique indexes on email (encrypted, useless as index)
-    _safe_drop_index(conn, 'ix_users_email')
-    _safe_drop_index(conn, 'idx_16965_ix_users_email')
-    # Make email_hash NOT NULL and create unique index
+    for idx in ['ix_users_email', 'idx_16965_ix_users_email']:
+        if _index_exists(conn, idx):
+            conn.execute(text(f"DROP INDEX IF EXISTS {idx}"))
     op.alter_column('users', 'email_hash', nullable=False)
-    op.create_index('ix_users_email_hash', 'users', ['email_hash'], unique=True)
+    if not _index_exists(conn, 'ix_users_email_hash'):
+        op.create_index('ix_users_email_hash', 'users', ['email_hash'], unique=True)
 
     # --- statements ---
-    # Drop old unique index on filename
-    _safe_drop_index(conn, 'idx_17008_ix_statements_filename')
-    # Drop useless index on encrypted account_number
-    _safe_drop_index(conn, 'idx_17008_ix_statements_account_number')
-    # Drop composite index that includes encrypted account_number
-    _safe_drop_index(conn, 'idx_17008_idx_statement_account_date')
-    # Make filename_hash NOT NULL and create unique index
+    for idx in ['idx_17008_ix_statements_filename', 'idx_17008_ix_statements_account_number',
+                'idx_17008_idx_statement_account_date']:
+        if _index_exists(conn, idx):
+            conn.execute(text(f"DROP INDEX IF EXISTS {idx}"))
     op.alter_column('statements', 'filename_hash', nullable=False)
-    op.create_index('ix_statements_filename_hash', 'statements', ['filename_hash'], unique=True)
+    if not _index_exists(conn, 'ix_statements_filename_hash'):
+        op.create_index('ix_statements_filename_hash', 'statements', ['filename_hash'], unique=True)
 
     # --- transactions ---
-    # Drop old unique index on (statement_id, transaction_date, description_raw, amount)
-    _safe_drop_index(conn, 'idx_16903_sqlite_autoindex_transactions_1')
-    # Drop useless indexes on encrypted columns
-    _safe_drop_index(conn, 'idx_16903_ix_transactions_account_number')
-    _safe_drop_index(conn, 'idx_16903_ix_transactions_merchant_name')
-    _safe_drop_index(conn, 'idx_16903_ix_transactions_reference_number')
-    # Drop composite index that includes encrypted merchant_name
-    _safe_drop_index(conn, 'idx_16903_idx_transaction_merchant')
-    # Create new indexes
-    op.create_index('ix_transactions_description_hash', 'transactions', ['description_hash'])
-    op.create_index(
-        'uq_transaction_duplicate', 'transactions',
-        ['statement_id', 'transaction_date', 'description_hash', 'amount'],
-        unique=True,
-    )
+    for idx in ['idx_16903_sqlite_autoindex_transactions_1',
+                'idx_16903_ix_transactions_account_number',
+                'idx_16903_ix_transactions_merchant_name',
+                'idx_16903_ix_transactions_reference_number',
+                'idx_16903_idx_transaction_merchant']:
+        if _index_exists(conn, idx):
+            conn.execute(text(f"DROP INDEX IF EXISTS {idx}"))
+    if not _index_exists(conn, 'ix_transactions_description_hash'):
+        op.create_index('ix_transactions_description_hash', 'transactions', ['description_hash'])
+    if not _index_exists(conn, 'uq_transaction_duplicate'):
+        op.create_index(
+            'uq_transaction_duplicate', 'transactions',
+            ['statement_id', 'transaction_date', 'description_hash', 'amount'],
+            unique=True,
+        )
 
     # --- accounts ---
-    op.create_index('ix_accounts_card_last_four', 'accounts', ['card_last_four'])
+    if not _index_exists(conn, 'ix_accounts_card_last_four'):
+        op.create_index('ix_accounts_card_last_four', 'accounts', ['card_last_four'])
 
     # --- password_reset_tokens ---
-    # Drop old unique index on token
-    _safe_drop_index(conn, 'ix_password_reset_tokens_token')
-    # Make token_hash NOT NULL and create unique index
+    if _index_exists(conn, 'ix_password_reset_tokens_token'):
+        conn.execute(text("DROP INDEX IF EXISTS ix_password_reset_tokens_token"))
     op.alter_column('password_reset_tokens', 'token_hash', nullable=False)
-    op.create_index('ix_password_reset_tokens_token_hash', 'password_reset_tokens', ['token_hash'], unique=True)
+    if not _index_exists(conn, 'ix_password_reset_tokens_token_hash'):
+        op.create_index('ix_password_reset_tokens_token_hash', 'password_reset_tokens', ['token_hash'], unique=True)
 
     # --- payments ---
-    _safe_drop_index(conn, 'idx_16928_ix_payments_account_number')
+    if _index_exists(conn, 'idx_16928_ix_payments_account_number'):
+        conn.execute(text("DROP INDEX IF EXISTS idx_16928_ix_payments_account_number"))
 
     # ================================================================
     # PHASE 4: Change Numeric columns to Text for encrypted storage
@@ -194,17 +216,40 @@ def upgrade() -> None:
     logger.info("Phase 4: Changing Numeric columns to Text...")
 
     for col in ['credit_limit', 'available_credit', 'cash_advance_limit', 'new_balance']:
-        op.alter_column(
-            'statements', col,
-            type_=sa.Text(),
-            existing_type=sa.Numeric(15, 2),
-            postgresql_using=f'{col}::text',
-        )
+        # Check current type before altering
+        result = conn.execute(text(
+            "SELECT data_type FROM information_schema.columns "
+            "WHERE table_name = 'statements' AND column_name = :col"
+        ), {"col": col})
+        row = result.fetchone()
+        if row and row[0] not in ('text', 'character varying'):
+            op.alter_column(
+                'statements', col,
+                type_=sa.Text(),
+                existing_type=sa.Numeric(15, 2),
+                postgresql_using=f'{col}::text',
+            )
 
     # ================================================================
     # PHASE 5: Encrypt existing data table by table
+    #          Skips values that are already encrypted
     # ================================================================
     logger.info("Phase 5: Encrypting existing data...")
+
+    from cryptography.fernet import Fernet, InvalidToken
+    import os
+
+    fernet = Fernet(os.environ['ENCRYPTION_KEY'].encode())
+
+    def _is_encrypted(val):
+        """Check if a value is already Fernet-encrypted."""
+        if val is None or val == '':
+            return True
+        try:
+            fernet.decrypt(val.encode())
+            return True
+        except (InvalidToken, Exception):
+            return False
 
     def _encrypt_table_columns(table_name, columns):
         """Encrypt specified columns in a table."""
@@ -222,9 +267,13 @@ def upgrade() -> None:
             updates = {}
             for i, col in enumerate(columns):
                 val = row[i + 1]
-                updates[col] = encrypt(val)
+                if not _is_encrypted(val):
+                    updates[col] = encrypt(val)
 
-            set_clause = ", ".join(f"{col} = :{col}" for col in columns)
+            if not updates:
+                continue
+
+            set_clause = ", ".join(f"{col} = :{col}" for col in updates)
             params = {**updates, "id": row[0]}
             conn.execute(
                 text(f"UPDATE {table_name} SET {set_clause} WHERE id = :id"),
@@ -255,7 +304,7 @@ def upgrade() -> None:
     result = conn.execute(text("SELECT id, raw_response FROM ai_extractions"))
     for row in result.fetchall():
         raw = row[1]
-        if raw is not None:
+        if raw is not None and not _is_encrypted(raw if isinstance(raw, str) else ''):
             if isinstance(raw, dict):
                 raw_str = json.dumps(raw, default=str)
             else:
@@ -266,24 +315,14 @@ def upgrade() -> None:
                 {"val": encrypted, "id": row[0]}
             )
 
-    # Encrypt liability_templates.name
     _encrypt_table_columns('liability_templates', ['name'])
-
-    # Encrypt monthly_liabilities.name and status
     _encrypt_table_columns('monthly_liabilities', ['name', 'status'])
-
-    # Encrypt password_reset_tokens.token
     _encrypt_table_columns('password_reset_tokens', ['token'])
 
-    logger.info("Migration complete!")
+    logger.info("Migration 012 complete!")
 
 
 def downgrade() -> None:
-    """
-    Downgrade is intentionally NOT supported.
-    Once data is encrypted, it cannot be safely reversed without
-    the original ENCRYPTION_KEY and a full DB backup.
-    """
     raise RuntimeError(
         "Downgrade not supported for encryption migration. "
         "Restore from database backup if needed."

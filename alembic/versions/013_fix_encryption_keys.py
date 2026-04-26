@@ -7,14 +7,10 @@ Create Date: 2026-04-26
 Re-encrypts all data with the correct ENCRYPTION_KEY from .env
 and recomputes all hash columns with the correct HASH_SALT.
 
-Migration 012 was accidentally run with test keys. This fixes it.
-
-Also merges duplicate user accounts that were created because the
-email_hash lookup was broken (wrong salt).
+Idempotent: safe to re-run if partially applied.
 
 IMPORTANT: The environment running this migration must have
-ENCRYPTION_KEY and HASH_SALT env vars set to the CORRECT values
-(the same ones the app uses from .env).
+ENCRYPTION_KEY and HASH_SALT env vars set to the CORRECT values.
 """
 from typing import Sequence, Union
 import hashlib
@@ -38,6 +34,14 @@ _OLD_KEY = 'uj2BqSoherJttXCo3wyZCQ5FxmEsYdp84v9i5AshV-0='
 _OLD_SALT = 'test-salt-value'
 
 
+def _index_exists(conn, index_name):
+    """Check if an index exists."""
+    result = conn.execute(text(
+        "SELECT 1 FROM pg_indexes WHERE indexname = :name"
+    ), {"name": index_name})
+    return result.fetchone() is not None
+
+
 def _get_crypto():
     """Build encrypt/decrypt/hash helpers for both old and new keys."""
     from cryptography.fernet import Fernet, InvalidToken
@@ -56,21 +60,17 @@ def _get_crypto():
     new_fernet = Fernet(new_key.encode())
 
     def try_decrypt(val):
-        """Try to decrypt with old key first, then new key.
-        Returns (plaintext, was_old_key).
-        If was_old_key is True, the value needs re-encryption.
-        If was_old_key is False, the value is already correct (or can't be decrypted).
-        """
+        """Try to decrypt with old key first, then new key."""
         if val is None or val == '':
             return val, False
         try:
             return old_fernet.decrypt(val.encode()).decode(), True
         except (InvalidToken, Exception):
-            # Verify it's already encrypted with the correct key
             try:
                 new_fernet.decrypt(val.encode()).decode()
                 return val, False  # Already correct
             except (InvalidToken, Exception):
+                # Might be plaintext (production never had test keys)
                 logger.warning("  Cannot decrypt value with either key, leaving as-is")
                 return val, False
 
@@ -109,10 +109,16 @@ def upgrade() -> None:
     # ================================================================
     logger.info("Phase 0: Widening varchar columns to text...")
 
-    op.alter_column('users', 'full_name',
-                    type_=sa.Text(),
-                    existing_type=sa.String(200),
-                    postgresql_using='full_name::text')
+    result = conn.execute(text(
+        "SELECT data_type FROM information_schema.columns "
+        "WHERE table_name = 'users' AND column_name = 'full_name'"
+    ))
+    row = result.fetchone()
+    if row and row[0] != 'text':
+        op.alter_column('users', 'full_name',
+                        type_=sa.Text(),
+                        existing_type=sa.String(200),
+                        postgresql_using='full_name::text')
 
     # ================================================================
     # PHASE 1: Re-encrypt all encrypted columns
@@ -173,7 +179,7 @@ def upgrade() -> None:
     for row in result.fetchall():
         raw = row[1]
         if raw is not None:
-            plaintext, needs_reencrypt = try_decrypt(raw)
+            plaintext, needs_reencrypt = try_decrypt(raw if isinstance(raw, str) else '')
             if needs_reencrypt:
                 encrypted = new_encrypt(plaintext)
                 conn.execute(
@@ -188,15 +194,11 @@ def upgrade() -> None:
     # ================================================================
     # PHASE 1.5: Merge duplicate users
     # ================================================================
-    # The broken email_hash lookup caused Google OAuth to create duplicate
-    # accounts for users who already existed. Find and merge them.
     logger.info("Phase 1.5: Merging duplicate user accounts...")
 
-    # Get all user emails (now all encrypted with correct key)
     result = conn.execute(text("SELECT id, email FROM users ORDER BY id"))
     users = result.fetchall()
 
-    # Build email -> list of user_ids mapping
     email_to_ids = {}
     for uid, email_cipher in users:
         plaintext = decrypt_for_hash(email_cipher)
@@ -206,39 +208,36 @@ def upgrade() -> None:
                 email_to_ids[email_lower] = []
             email_to_ids[email_lower].append(uid)
 
-    # For each duplicate group, keep the earliest user, merge others
     for email, user_ids in email_to_ids.items():
         if len(user_ids) <= 1:
             continue
 
-        keep_id = user_ids[0]  # Keep the earliest (lowest id)
-        remove_ids = user_ids[1:]  # Remove later duplicates
+        keep_id = user_ids[0]
+        remove_ids = user_ids[1:]
 
         for remove_id in remove_ids:
             logger.info(f"  Merging user {remove_id} into user {keep_id} (email: {email})")
 
-            # Reassign daily_expenses
             conn.execute(text(
                 "UPDATE daily_expenses SET user_id = :keep WHERE user_id = :remove"
             ), {"keep": keep_id, "remove": remove_id})
 
-            # Reassign daily_income
             conn.execute(text(
                 "UPDATE daily_income SET user_id = :keep WHERE user_id = :remove"
             ), {"keep": keep_id, "remove": remove_id})
 
-            # Delete the duplicate user
             conn.execute(text("DELETE FROM users WHERE id = :id"), {"id": remove_id})
 
     # ================================================================
-    # PHASE 2: Drop unique indexes, recompute hashes, recreate indexes
+    # PHASE 2: Recompute hashes with correct salt — idempotent
     # ================================================================
     logger.info("Phase 2: Recomputing hash columns with correct salt...")
 
-    # Drop unique indexes temporarily
-    conn.execute(text("DROP INDEX IF EXISTS ix_users_email_hash"))
-    conn.execute(text("DROP INDEX IF EXISTS ix_statements_filename_hash"))
-    conn.execute(text("DROP INDEX IF EXISTS ix_password_reset_tokens_token_hash"))
+    # Drop unique indexes temporarily (if they exist)
+    for idx in ['ix_users_email_hash', 'ix_statements_filename_hash',
+                'ix_password_reset_tokens_token_hash']:
+        if _index_exists(conn, idx):
+            conn.execute(text(f"DROP INDEX IF EXISTS {idx}"))
 
     # users.email_hash
     result = conn.execute(text("SELECT id, email FROM users"))
@@ -280,12 +279,15 @@ def upgrade() -> None:
                 {"hash": new_hash(plaintext), "id": row[0]}
             )
 
-    # Recreate unique indexes
-    op.create_index('ix_users_email_hash', 'users', ['email_hash'], unique=True)
-    op.create_index('ix_statements_filename_hash', 'statements', ['filename_hash'], unique=True)
-    op.create_index('ix_password_reset_tokens_token_hash', 'password_reset_tokens', ['token_hash'], unique=True)
+    # Recreate unique indexes (if they don't exist)
+    if not _index_exists(conn, 'ix_users_email_hash'):
+        op.create_index('ix_users_email_hash', 'users', ['email_hash'], unique=True)
+    if not _index_exists(conn, 'ix_statements_filename_hash'):
+        op.create_index('ix_statements_filename_hash', 'statements', ['filename_hash'], unique=True)
+    if not _index_exists(conn, 'ix_password_reset_tokens_token_hash'):
+        op.create_index('ix_password_reset_tokens_token_hash', 'password_reset_tokens', ['token_hash'], unique=True)
 
-    logger.info("Re-encryption complete!")
+    logger.info("Migration 013 complete!")
 
 
 def downgrade() -> None:
