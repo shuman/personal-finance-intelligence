@@ -8,18 +8,18 @@
         <div class="flex items-center gap-2 text-sm text-gray-500 mb-1">
             <a href="/liabilities/dashboard" class="hover:text-indigo-600"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
-        <h1 class="text-2xl font-bold tracking-tight text-gray-900">Master Templates</h1>
-        <p class="text-sm text-gray-500 mt-1">Configure your recurring monthly liabilities here. These serve as the master list when generating a new month.</p>
+        <h1 class="text-2xl font-bold tracking-tight text-gray-900">Liability Templates</h1>
+        <p class="text-sm text-gray-500 mt-1">Create your regular monthly liability items here, like rent, loan payments, or salaries. When you generate a new month, these active templates are copied into that month's liability list automatically.</p>
     </div>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<div class="space-y-6">
     <!-- Add New Form -->
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 self-start">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
         <h3 class="text-lg font-semibold text-gray-900 mb-4 border-b pb-2">Add New Liability</h3>
         
-        <form id="templateForm" class="space-y-4" onsubmit="event.preventDefault(); saveTemplate();">
-            <div>
+        <form id="templateForm" class="grid grid-cols-1 gap-4 md:grid-cols-4 md:items-end" onsubmit="event.preventDefault(); saveTemplate();">
+            <div class="md:col-span-2">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
                 <input type="text" id="t-name" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="e.g. Office - Rent">
             </div>
@@ -38,14 +38,14 @@
                 </select>
             </div>
             
-            <button type="submit" class="w-full bg-slate-800 text-white font-medium px-4 py-2 rounded-lg hover:bg-slate-900 transition flex justify-center items-center gap-2">
+            <button type="submit" class="w-full bg-slate-800 text-white font-medium px-4 py-2 rounded-lg hover:bg-slate-900 transition flex justify-center items-center gap-2 md:w-auto">
                 <i class="fas fa-plus text-xs"></i> Add Template
             </button>
         </form>
     </div>
 
     <!-- List -->
-    <div class="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
             <h3 class="font-semibold text-gray-900">Current Templates</h3>
         </div>
@@ -57,10 +57,11 @@
                         <th class="px-4 py-3 text-left">Priority</th>
                         <th class="px-4 py-3 text-right">Default Amount</th>
                         <th class="px-4 py-3 text-center">Status</th>
+                        <th class="px-4 py-3 text-center">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-100 text-sm" id="templates-tbody">
-                    <tr><td colspan="4" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                    <tr><td colspan="5" class="text-center py-8 text-gray-400"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -70,6 +71,119 @@
 
 {% block extra_scripts %}
 <script>
+    let editingTemplateId = null;
+
+    function resetTemplateForm() {
+        document.getElementById('templateForm').reset();
+    }
+
+    function formatAmount(amount) {
+        return Number(amount || 0).toLocaleString('en-IN', {maximumFractionDigits: 0});
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function getPriorityBadgeClass(priority) {
+        if (priority === 'Primary') return 'bg-rose-100 text-rose-800';
+        if (priority === 'Secondary') return 'bg-amber-100 text-amber-800';
+        return 'bg-gray-100 text-gray-800';
+    }
+
+    function startEditTemplate(templateId) {
+        editingTemplateId = templateId;
+        loadTemplates();
+    }
+
+    function cancelEditTemplate() {
+        editingTemplateId = null;
+        loadTemplates();
+    }
+
+    async function saveInlineTemplate(templateId) {
+        const name = document.getElementById(`edit-name-${templateId}`).value.trim();
+        const amountValue = document.getElementById(`edit-amount-${templateId}`).value;
+        const priority = document.getElementById(`edit-priority-${templateId}`).value;
+
+        if (!name || !amountValue) {
+            alert('Name and amount are required');
+            return;
+        }
+
+        const payload = {
+            name,
+            default_amount: parseFloat(amountValue),
+            priority
+        };
+
+        try {
+            const res = await fetch(`/liabilities/api/templates/${templateId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                editingTemplateId = null;
+                await loadTemplates();
+            } else {
+                alert('Error updating template');
+            }
+        } catch (e) {
+            alert(e);
+        }
+    }
+
+    async function toggleTemplateStatus(templateId, isActive) {
+        try {
+            const res = await fetch(`/liabilities/api/templates/${templateId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ is_active: !isActive })
+            });
+
+            if (res.ok) {
+                if (editingTemplateId === templateId) {
+                    editingTemplateId = null;
+                }
+                await loadTemplates();
+            } else {
+                alert('Error updating template status');
+            }
+        } catch (e) {
+            alert(e);
+        }
+    }
+
+    async function deleteTemplate(templateId, templateName) {
+        if (!confirm(`Delete template "${templateName}"?`)) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`/liabilities/api/templates/${templateId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.ok) {
+                if (editingTemplateId === templateId) {
+                    editingTemplateId = null;
+                }
+                await loadTemplates();
+            } else {
+                alert('Error deleting template');
+            }
+        } catch (e) {
+            alert(e);
+        }
+    }
+
     async function loadTemplates() {
         const res = await fetch('/liabilities/api/templates');
         const data = await res.json();
@@ -77,37 +191,112 @@
         tbody.innerHTML = '';
         
         if(data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-500 italic">No templates configured yet.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500 italic">No templates configured yet.</td></tr>';
             return;
         }
         
         data.forEach(item => {
             const tr = document.createElement('tr');
-            
-            let priClass = 'bg-gray-100 text-gray-800';
-            if(item.priority === 'Primary') priClass = 'bg-rose-100 text-rose-800';
-            if(item.priority === 'Secondary') priClass = 'bg-amber-100 text-amber-800';
-            
-            tr.innerHTML = `
-                <td class="px-4 py-3 font-medium text-gray-900">${item.name}</td>
-                <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${priClass}">${item.priority}</span></td>
-                <td class="px-4 py-3 text-right">৳${Number(item.default_amount).toLocaleString('en-IN', {maximumFractionDigits:0})}</td>
-                <td class="px-4 py-3 text-center">
-                    <span class="px-2 py-1 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}">
-                        ${item.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                </td>
-            `;
+
+            if (editingTemplateId === item.id) {
+                tr.className = 'bg-indigo-50/50';
+                tr.innerHTML = `
+                    <td class="px-4 py-3">
+                        <input type="text" id="edit-name-${item.id}" value="${escapeHtml(item.name)}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </td>
+                    <td class="px-4 py-3">
+                        <select id="edit-priority-${item.id}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="Primary" ${item.priority === 'Primary' ? 'selected' : ''}>Primary</option>
+                            <option value="Secondary" ${item.priority === 'Secondary' ? 'selected' : ''}>Secondary</option>
+                            <option value="Optional" ${item.priority === 'Optional' ? 'selected' : ''}>Optional</option>
+                        </select>
+                    </td>
+                    <td class="px-4 py-3">
+                        <input type="number" step="0.01" id="edit-amount-${item.id}" value="${item.default_amount ?? ''}" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-right focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="px-2 py-1 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}">
+                            ${item.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center justify-center gap-2">
+                            <button type="button" class="inline-flex items-center gap-1 rounded-md bg-slate-800 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-900">
+                                <i class="fas fa-check text-[10px]"></i>
+                                Save
+                            </button>
+                            <button type="button" class="inline-flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50">
+                                <i class="fas fa-xmark text-[10px]"></i>
+                                Cancel
+                            </button>
+                        </div>
+                    </td>
+                `;
+                const [saveButton, cancelButton] = tr.querySelectorAll('button');
+                saveButton.addEventListener('click', () => saveInlineTemplate(item.id));
+                cancelButton.addEventListener('click', cancelEditTemplate);
+            } else {
+                const priClass = getPriorityBadgeClass(item.priority);
+                tr.innerHTML = `
+                    <td class="px-4 py-3 font-medium text-gray-900">${escapeHtml(item.name)}</td>
+                    <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-[11px] font-semibold tracking-wide ${priClass}">${item.priority}</span></td>
+                    <td class="px-4 py-3 text-right">৳${formatAmount(item.default_amount)}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="px-2 py-1 rounded text-xs font-medium ${item.is_active ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}">
+                            ${item.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-center"></td>
+                `;
+                const actionsCell = tr.lastElementChild;
+                const actionsWrap = document.createElement('div');
+                actionsWrap.className = 'flex flex-wrap items-center justify-center gap-2';
+
+                const editButton = document.createElement('button');
+                editButton.type = 'button';
+                editButton.className = 'inline-flex items-center gap-1 rounded-md border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50';
+                editButton.innerHTML = '<i class="fas fa-pen text-[10px]"></i> Edit';
+                editButton.addEventListener('click', () => startEditTemplate(item.id));
+
+                const toggleButton = document.createElement('button');
+                toggleButton.type = 'button';
+                toggleButton.className = `inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-xs font-medium ${
+                    item.is_active
+                        ? 'border border-amber-300 text-amber-700 hover:bg-amber-50'
+                        : 'border border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+                }`;
+                toggleButton.innerHTML = item.is_active
+                    ? '<i class="fas fa-pause text-[10px]"></i> Inactive'
+                    : '<i class="fas fa-play text-[10px]"></i> Active';
+                toggleButton.addEventListener('click', () => toggleTemplateStatus(item.id, item.is_active));
+
+                const deleteButton = document.createElement('button');
+                deleteButton.type = 'button';
+                deleteButton.className = 'inline-flex items-center gap-1 rounded-md border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50';
+                deleteButton.innerHTML = '<i class="fas fa-trash text-[10px]"></i> Delete';
+                deleteButton.addEventListener('click', () => deleteTemplate(item.id, item.name));
+
+                actionsWrap.appendChild(editButton);
+                actionsWrap.appendChild(toggleButton);
+                actionsWrap.appendChild(deleteButton);
+                actionsCell.appendChild(actionsWrap);
+            }
+
             tbody.appendChild(tr);
         });
     }
     
     async function saveTemplate() {
         const payload = {
-            name: document.getElementById('t-name').value,
+            name: document.getElementById('t-name').value.trim(),
             default_amount: parseFloat(document.getElementById('t-amount').value),
             priority: document.getElementById('t-priority').value
         };
+
+        if (!payload.name || Number.isNaN(payload.default_amount)) {
+            alert('Name and amount are required');
+            return;
+        }
         
         try {
             const res = await fetch('/liabilities/api/templates', {
@@ -117,8 +306,8 @@
             });
             
             if(res.ok) {
-                document.getElementById('templateForm').reset();
-                loadTemplates();
+                resetTemplateForm();
+                await loadTemplates();
             } else {
                 alert("Error saving template");
             }

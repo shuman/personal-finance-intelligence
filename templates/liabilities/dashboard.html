@@ -55,6 +55,9 @@
             <span id="currentMonthYear" class="text-sm font-semibold w-24 text-center">...</span>
             <button id="nextMonth" class="px-2 py-1 text-gray-500 hover:text-gray-900 rounded"><i class="fas fa-chevron-right"></i></button>
         </div>
+        <button id="goCurrentMonth" class="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:text-gray-900 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed">
+            Current Month
+        </button>
     </div>
 </div>
 
@@ -189,7 +192,7 @@
     let currentRecordId = null;
     let sortableInst = null;
     
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     
     function cleanNumber(val) {
         if (!val) return 0;
@@ -203,6 +206,9 @@
     
     function updateDateDisplay() {
         document.getElementById('currentMonthYear').textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+        const now = new Date();
+        const isCurrentMonth = currentDate.getFullYear() === now.getFullYear() && currentDate.getMonth() === now.getMonth();
+        document.getElementById('goCurrentMonth').disabled = isCurrentMonth;
         fetchMonthData();
     }
     
@@ -213,6 +219,11 @@
     
     document.getElementById('nextMonth').addEventListener('click', () => {
         currentDate.setMonth(currentDate.getMonth() + 1);
+        updateDateDisplay();
+    });
+
+    document.getElementById('goCurrentMonth').addEventListener('click', () => {
+        currentDate = new Date();
         updateDateDisplay();
     });
     

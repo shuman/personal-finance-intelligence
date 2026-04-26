@@ -163,6 +163,7 @@ class CategoryEngine:
     def __init__(self, db: AsyncSession):
         self.db = db
         self._claude_client = None
+        self.last_batch_stats: Dict[str, Any] = {}
 
     def _get_claude_client(self):
         """Get or create AsyncAnthropic client for proper async support."""
@@ -319,6 +320,58 @@ class CategoryEngine:
         return best_match
 
     # ------------------------------------------------------------------
+    # Individual Claude fallback (when batch call fails)
+    # ------------------------------------------------------------------
+
+    async def _individual_claude_fallback(
+        self,
+        unmatched: list[Tuple[int, Dict[str, Any]]],
+        user_id: Optional[int] = None,
+    ) -> int:
+        """
+        Try Claude categorization individually for each unmatched transaction.
+        Used as fallback when batch call fails. Returns count of successes.
+        """
+        if not settings.anthropic_api_key:
+            return 0
+
+        count = 0
+        for _, txn in unmatched:
+            if txn.get("category_ai"):
+                continue  # Already categorized by batch or rule
+
+            merchant = txn.get("merchant_name") or txn.get("description_raw", "")
+            country = txn.get("merchant_country") or "BD"
+            try:
+                category, subcategory, confidence = await self._claude_categorize_with_retry(
+                    merchant, txn.get("description_raw", ""), country
+                )
+                if category not in self.CATEGORIES:
+                    category = "Other"
+
+                txn["category_ai"] = category
+                txn["subcategory_ai"] = subcategory
+                txn["category_source"] = "claude_ai"
+                txn["category_confidence"] = round(confidence, 2)
+
+                # Store as rule for future reuse
+                normalized = self._normalize(merchant)
+                await self._store_rule(
+                    user_id=user_id,
+                    merchant_pattern=merchant,
+                    normalized=normalized,
+                    category=category,
+                    subcategory=subcategory,
+                    source="claude_ai",
+                    confidence=confidence,
+                )
+                count += 1
+            except Exception as e:
+                logger.debug(f"Individual Claude call failed for '{merchant}': {e}")
+
+        return count
+
+    # ------------------------------------------------------------------
     # Batch categorization (single API call for all unmatched merchants)
     # ------------------------------------------------------------------
 
@@ -328,10 +381,13 @@ class CategoryEngine:
         user_id: Optional[int] = None,
     ) -> list[Dict[str, Any]]:
         """
-        Two-pass categorization:
+        Three-pass categorization:
           Pass 1 — match every transaction against the rules table (free).
-          Pass 2 — send ALL unmatched transactions to Claude in ONE batch call.
+          Pass 2 — send ALL unmatched transactions to Claude in ONE batch call,
+                   with individual call fallback if batch fails.
+          Pass 3 — keyword fallback for any remaining uncategorized.
         Updates each transaction dict in-place and returns it.
+        Populates self.last_batch_stats with categorization diagnostics.
         """
         unmatched: list[Tuple[int, Dict[str, Any]]] = []  # (index, txn)
 
@@ -353,21 +409,23 @@ class CategoryEngine:
                 txn["category_source"] = "rule"
                 txn["category_confidence"] = float(rule.confidence)
             else:
-                # Keyword fallback first — it's free
-                kw_cat = self._keyword_fallback(normalized)
-                if kw_cat != "Other":
-                    txn["category_ai"] = kw_cat
-                    txn["subcategory_ai"] = None
-                    txn["category_source"] = "builtin"
-                    txn["category_confidence"] = 0.65
-                else:
-                    unmatched.append((idx, txn))
+                unmatched.append((idx, txn))
 
             # Keep merchant_category in sync
             if not txn.get("merchant_category") and txn.get("category_ai"):
                 txn["merchant_category"] = txn["category_ai"]
 
         rule_matched = len(transactions) - len(unmatched)
+
+        # Stats tracking
+        self.last_batch_stats = {
+            "total": len(transactions),
+            "rule_count": rule_matched,
+            "ai_count": 0,
+            "fallback_count": 0,
+            "errors": [],
+        }
+
         logger.info(
             f"Batch pass 1 (rules): {rule_matched} matched, "
             f"{len(unmatched)} need Claude AI"
@@ -378,69 +436,81 @@ class CategoryEngine:
 
         # ---- Pass 2: single batch Claude call for all unmatched ----
         if not settings.anthropic_api_key:
-            logger.warning("No Anthropic API key — falling back for all unmatched")
-            for _, txn in unmatched:
-                txn["category_ai"] = "Other"
-                txn["subcategory_ai"] = None
-                txn["category_source"] = "fallback"
-                txn["category_confidence"] = 0.5
-                if not txn.get("merchant_category"):
-                    txn["merchant_category"] = "Other"
-            return transactions
+            error_msg = "ANTHROPIC_API_KEY not configured — AI categorization unavailable"
+            logger.warning(error_msg)
+            self.last_batch_stats["errors"].append(error_msg)
+            # Fall through to Pass 3 (keyword fallback)
+        else:
+            try:
+                ai_results = await self._batch_claude_categorize(unmatched)
+                ai_count = 0
 
-        try:
-            ai_results = await self._batch_claude_categorize(unmatched)
+                for list_idx, (txn_idx, txn) in enumerate(unmatched):
+                    result = ai_results.get(list_idx)
+                    if result:
+                        cat = result.get("category", "Other")
+                        subcat = result.get("subcategory")
+                        conf = float(result.get("confidence", 0.8))
 
-            for list_idx, (txn_idx, txn) in enumerate(unmatched):
-                result = ai_results.get(list_idx)
-                if result:
-                    cat = result.get("category", "Other")
-                    subcat = result.get("subcategory")
-                    conf = float(result.get("confidence", 0.8))
+                        # Validate category
+                        if cat not in self.CATEGORIES:
+                            cat = "Other"
 
-                    # Validate category
-                    if cat not in self.CATEGORIES:
-                        cat = "Other"
+                        txn["category_ai"] = cat
+                        txn["subcategory_ai"] = subcat
+                        txn["category_source"] = "claude_ai"
+                        txn["category_confidence"] = round(conf, 2)
+                        ai_count += 1
 
-                    txn["category_ai"] = cat
-                    txn["subcategory_ai"] = subcat
-                    txn["category_source"] = "claude_ai"
-                    txn["category_confidence"] = round(conf, 2)
+                        # Store as rule for future reuse
+                        merchant = txn.get("merchant_name") or txn.get("description_raw", "")
+                        normalized = self._normalize(merchant)
+                        await self._store_rule(
+                            user_id=user_id,
+                            merchant_pattern=merchant,
+                            normalized=normalized,
+                            category=cat,
+                            subcategory=subcat,
+                            source="claude_ai",
+                            confidence=conf,
+                        )
 
-                    # Store as rule for future reuse
-                    merchant = txn.get("merchant_name") or txn.get("description_raw", "")
-                    normalized = self._normalize(merchant)
-                    await self._store_rule(
-                        user_id=user_id,
-                        merchant_pattern=merchant,
-                        normalized=normalized,
-                        category=cat,
-                        subcategory=subcat,
-                        source="claude_ai",
-                        confidence=conf,
-                    )
-                else:
-                    txn["category_ai"] = "Other"
-                    txn["subcategory_ai"] = None
-                    txn["category_source"] = "fallback"
-                    txn["category_confidence"] = 0.5
+                    if not txn.get("merchant_category") and txn.get("category_ai"):
+                        txn["merchant_category"] = txn["category_ai"]
 
-                if not txn.get("merchant_category"):
-                    txn["merchant_category"] = txn["category_ai"]
+                self.last_batch_stats["ai_count"] = ai_count
+                logger.info(f"Batch pass 2 (Claude): {ai_count} categorized in 1 API call")
 
-            logger.info(f"Batch pass 2 (Claude): {len(ai_results)} categorized in 1 API call")
+            except Exception as e:
+                error_msg = f"Batch Claude call failed: {type(e).__name__}: {e}"
+                logger.error(error_msg, exc_info=True)
+                self.last_batch_stats["errors"].append(error_msg)
 
-        except Exception as e:
-            logger.error(f"Batch Claude categorization failed: {e}", exc_info=True)
-            for _, txn in unmatched:
-                txn["category_ai"] = self._keyword_fallback(
-                    self._normalize(txn.get("merchant_name") or txn.get("description_raw", ""))
+                # Try individual Claude calls as fallback
+                ind_count = await self._individual_claude_fallback(unmatched, user_id)
+                self.last_batch_stats["ai_count"] = ind_count
+                if ind_count > 0:
+                    logger.info(f"Individual Claude fallback: {ind_count} succeeded")
+
+        # ---- Pass 3: keyword fallback for remaining uncategorized ----
+        fb_count = 0
+        for _, txn in unmatched:
+            if not txn.get("category_ai"):
+                normalized = self._normalize(
+                    txn.get("merchant_name") or txn.get("description_raw", "")
                 )
+                kw_cat = self._keyword_fallback(normalized)
+                txn["category_ai"] = kw_cat
                 txn["subcategory_ai"] = None
                 txn["category_source"] = "fallback"
                 txn["category_confidence"] = 0.5
+                fb_count += 1
                 if not txn.get("merchant_category"):
-                    txn["merchant_category"] = txn["category_ai"]
+                    txn["merchant_category"] = kw_cat
+
+        if fb_count > 0:
+            self.last_batch_stats["fallback_count"] = fb_count
+            logger.info(f"Pass 3 (keyword fallback): {fb_count} transactions")
 
         return transactions
 
@@ -504,8 +574,17 @@ Rules:
                     raw = "\n".join(raw.split("\n")[1:])
                 if raw.endswith("```"):
                     raw = "\n".join(raw.split("\n")[:-1])
+                raw = raw.strip()
 
-                results_array = json.loads(raw.strip())
+                # Extract JSON array (Claude may include text before/after)
+                json_start = raw.find('[')
+                json_end = raw.rfind(']')
+                if json_start >= 0 and json_end > json_start:
+                    raw = raw[json_start:json_end + 1]
+                else:
+                    raise ValueError(f"No JSON array found in Claude response: {raw[:200]}")
+
+                results_array = json.loads(raw)
 
                 # Map back to list indices (0-based)
                 results: Dict[int, Dict[str, Any]] = {}

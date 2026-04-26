@@ -294,6 +294,20 @@ async def force_generate_report(
     # Check that transaction data exists for the period
     month_names = ["January","February","March","April","May","June",
                    "July","August","September","October","November","December"]
+
+    # Generation is allowed only for past months.
+    # Current/future months are blocked entirely.
+    advisor = AdvisorService(db)
+    existing = await advisor._get_cached_report(current_user.id, year, month, account_id)
+    today = date.today()
+    is_past_month = (year, month) < (today.year, today.month)
+
+    if not is_past_month:
+        raise HTTPException(
+            status_code=400,
+            detail="Advisor report generation is only available for past months."
+        )
+
     sig_engine = SignalEngine(db)
     signals = await sig_engine.compute_all_signals(current_user.id, year, month, account_id)
     if not signals.get("has_data"):
@@ -305,9 +319,12 @@ async def force_generate_report(
             )
         )
 
-    advisor = AdvisorService(db)
     report = await advisor.generate_advisor_report(
-        current_user.id, year, month, account_id, force_regenerate=True
+        current_user.id,
+        year,
+        month,
+        account_id,
+        force_regenerate=bool(existing and is_past_month),
     )
 
     if not report:

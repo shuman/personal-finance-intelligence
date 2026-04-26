@@ -69,7 +69,7 @@
     <p class="text-gray-400 mb-4 max-w-md mx-auto">Click <strong>Generate Report</strong> to get your AI-powered financial diagnosis for the selected month.</p>
     <!-- Inline error message shown when generation fails -->
     <div id="generateError" class="hidden max-w-lg mx-auto mb-6 bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-700"></div>
-    <button onclick="generateReport()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
+    <button id="generateBtnEmpty" onclick="generateReport()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
       <i class="fas fa-wand-magic-sparkles"></i> Generate Report
     </button>
   </div>
@@ -285,23 +285,43 @@ function changeMonth(delta) {
   loadReport();
 }
 
+function setGenerateButtonsVisible(visible) {
+  const headerBtn = document.getElementById('generateBtn');
+  const emptyBtn = document.getElementById('generateBtnEmpty');
+  if (headerBtn) headerBtn.classList.toggle('hidden', !visible);
+  if (emptyBtn) emptyBtn.classList.toggle('hidden', !visible);
+}
+
+function isPastMonth(year, month) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  return year < currentYear || (year === currentYear && month < currentMonth);
+}
+
 async function loadReport() {
   showLoading(true, 'Checking for saved report...');
+  setGenerateButtonsVisible(false);
   try {
     const res = await fetch(`/api/advisor/report/${currentYear}/${currentMonth}`);
+    const allowGenerateForMonth = isPastMonth(currentYear, currentMonth);
     if (res.status === 404) {
       // No cached report — show empty state with Generate button (no auto-generate)
+      setGenerateButtonsVisible(allowGenerateForMonth);
       showEmpty(true);
       return;
     }
     if (!res.ok) {
+      setGenerateButtonsVisible(false);
       showEmpty(true);
       return;
     }
     const data = await res.json();
+    setGenerateButtonsVisible(false);
     renderReport(data);
   } catch (e) {
     console.error('Failed to load report:', e);
+    setGenerateButtonsVisible(false);
     showEmpty(true);
   } finally {
     showLoading(false);
@@ -310,8 +330,13 @@ async function loadReport() {
 
 async function generateReport() {
   const btn = document.getElementById('generateBtn');
+  const emptyBtn = document.getElementById('generateBtnEmpty');
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  if (emptyBtn) {
+    emptyBtn.disabled = true;
+    emptyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+  }
   // Hide any previous error
   const errEl = document.getElementById('generateError');
   if (errEl) { errEl.classList.add('hidden'); errEl.textContent = ''; }
@@ -338,6 +363,10 @@ async function generateReport() {
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Report';
+    if (emptyBtn) {
+      emptyBtn.disabled = false;
+      emptyBtn.innerHTML = '<i class="fas fa-wand-magic-sparkles"></i> Generate Report';
+    }
     showLoading(false);
   }
 }
@@ -362,6 +391,7 @@ function renderReport(data) {
   document.getElementById('emptyState').classList.add('hidden');
   document.getElementById('loadingState').classList.add('hidden');
   document.getElementById('reportContent').classList.remove('hidden');
+  setGenerateButtonsVisible(false);
 
   // Diagnosis
   document.getElementById('diagnosisText').textContent = data.diagnosis || '';

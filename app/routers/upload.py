@@ -235,6 +235,9 @@ async def preview_statement(
         await engine.batch_categorize(txn_list, user_id=current_user.id)
         logger.info(f"Batch categorization complete for {total_transactions} transactions")
 
+        # Categorization diagnostics
+        cat_stats = getattr(engine, "last_batch_stats", {})
+
         # ------------------------------------------------------------------
         # Serialize for JSON response
         # ------------------------------------------------------------------
@@ -267,6 +270,7 @@ async def preview_statement(
                 "card_sections_meta": card_sections_meta,
                 "metadata": metadata,
                 "transactions": transactions,
+                "categorization_stats": cat_stats,
                 "fees": fees,
                 "interest_charges": interest_charges,
                 "temp_path": temp_path,

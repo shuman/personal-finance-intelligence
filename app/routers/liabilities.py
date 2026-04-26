@@ -25,6 +25,12 @@ class TemplateCreate(BaseModel):
     default_amount: Optional[Decimal] = None
     priority: str = "Primary"
 
+class TemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    default_amount: Optional[Decimal] = None
+    priority: Optional[str] = None
+    is_active: Optional[bool] = None
+
 class StatusUpdate(BaseModel):
     status: str
     paid_amount: Optional[Decimal] = None
@@ -79,6 +85,46 @@ async def create_template(data: TemplateCreate, db: AsyncSession = Depends(get_d
     db.add(template)
     await db.commit()
     return {"status": "success", "id": template.id}
+
+@router.put("/api/templates/{template_id}")
+async def update_template(template_id: int, data: TemplateUpdate, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(
+        select(LiabilityTemplate).where(
+            LiabilityTemplate.id == template_id,
+            LiabilityTemplate.user_id == current_user.id,
+        )
+    )
+    template = result.scalars().first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    if data.name is not None:
+        template.name = data.name
+    if data.default_amount is not None:
+        template.default_amount = data.default_amount
+    if data.priority is not None:
+        template.priority = data.priority
+    if data.is_active is not None:
+        template.is_active = data.is_active
+
+    await db.commit()
+    return {"status": "success"}
+
+@router.delete("/api/templates/{template_id}")
+async def delete_template(template_id: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    result = await db.execute(
+        select(LiabilityTemplate).where(
+            LiabilityTemplate.id == template_id,
+            LiabilityTemplate.user_id == current_user.id,
+        )
+    )
+    template = result.scalars().first()
+    if not template:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    await db.delete(template)
+    await db.commit()
+    return {"status": "success"}
 
 @router.get("/api/months/{year}/{month}")
 async def get_monthly_record(year: int, month: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):

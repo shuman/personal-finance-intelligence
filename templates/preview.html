@@ -56,6 +56,12 @@
         <div id="ai-issues-alert" class="hidden bg-orange-50 border-t border-orange-200 px-4 py-2 text-xs text-orange-800">
             <i class="fas fa-bug mr-1"></i><span id="ai-issues-text"></span>
         </div>
+        <!-- Categorization stats & errors -->
+        <div id="cat-stats-alert" class="hidden border-t px-4 py-2 text-xs">
+            <div class="flex items-center justify-between">
+                <div id="cat-stats-text"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Statement Metadata -->
@@ -147,6 +153,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     previewData = JSON.parse(raw);
     renderAiBanner(previewData);
+    renderCatStats(previewData);
     renderMetadata(previewData.metadata);
     renderTransactions(previewData.transactions);
 });
@@ -232,6 +239,44 @@ function renderAiBanner(data) {
         document.getElementById('ai-issues-alert').classList.remove('hidden');
         document.getElementById('ai-issues-text').textContent =
             `${issues.length} extraction issue(s): ` + issues.slice(0,2).map(i => i.detail || i.type).join('; ');
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Categorization Stats
+// ---------------------------------------------------------------------------
+function renderCatStats(data) {
+    const stats = data.categorization_stats;
+    if (!stats) return;
+
+    const el = document.getElementById('cat-stats-alert');
+    const textEl = document.getElementById('cat-stats-text');
+    const errors = stats.errors || [];
+
+    // Build stats summary
+    const parts = [];
+    if (stats.rule_count > 0) parts.push(`<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-400 inline-block"></span>${stats.rule_count} rule</span>`);
+    if (stats.ai_count > 0) parts.push(`<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-purple-400 inline-block"></span>${stats.ai_count} AI</span>`);
+    if (stats.fallback_count > 0) parts.push(`<span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-gray-300 inline-block"></span>${stats.fallback_count} fallback</span>`);
+
+    if (errors.length > 0) {
+        el.classList.remove('hidden');
+        el.classList.add('bg-red-50', 'border-red-200');
+        el.querySelector('div').classList.add('text-red-800');
+        textEl.innerHTML = `
+            <div class="flex items-start gap-2">
+                <i class="fas fa-exclamation-triangle mt-0.5"></i>
+                <div>
+                    <strong>AI Categorization Error:</strong> ${escHtml(errors[0].substring(0, 200))}
+                    <div class="mt-1 text-red-600">${parts.join(' &middot; ')}</div>
+                </div>
+            </div>
+        `;
+    } else if (stats.ai_count > 0) {
+        el.classList.remove('hidden');
+        el.classList.add('bg-blue-50', 'border-blue-200');
+        el.querySelector('div').classList.add('text-blue-800');
+        textEl.innerHTML = `<i class="fas fa-tags mr-1"></i> Categorized: ${parts.join(' &middot; ')}`;
     }
 }
 
