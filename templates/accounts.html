@@ -11,7 +11,8 @@
             <h1 class="text-2xl font-bold text-gray-900">My Cards & Accounts</h1>
             <p class="text-sm text-gray-500 mt-0.5">Manage your registered cards and category rules.</p>
         </div>
-        <button onclick="openModal()" class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
+        <button onclick="openModal()"
+            class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
             <i class="fas fa-plus text-xs"></i> Register Card
         </button>
     </div>
@@ -25,8 +26,10 @@
             <i class="fas fa-credit-card text-2xl text-gray-300"></i>
         </div>
         <h3 class="text-lg font-semibold text-gray-700 mb-1">No cards registered yet</h3>
-        <p class="text-sm text-gray-400 mb-5 max-w-sm mx-auto">Register your cards to enable multi-card tracking and AI analysis.</p>
-        <button onclick="openModal()" class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
+        <p class="text-sm text-gray-400 mb-5 max-w-sm mx-auto">Register your cards to enable multi-card tracking and AI
+            analysis.</p>
+        <button onclick="openModal()"
+            class="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
             <i class="fas fa-plus text-xs"></i> Register Your First Card
         </button>
     </div>
@@ -36,9 +39,11 @@
         <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <div class="flex items-center gap-2.5">
                 <h2 class="text-base font-semibold text-gray-800">Category Rules</h2>
-                <span id="ruleCount" class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium"></span>
+                <span id="ruleCount"
+                    class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium"></span>
             </div>
-            <button onclick="seedRules()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
+            <button onclick="seedRules()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
                 <i class="fas fa-sync-alt"></i> Seed Defaults
             </button>
         </div>
@@ -47,10 +52,11 @@
             <div class="relative">
                 <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
                 <input type="text" id="ruleSearch" placeholder="Search rules by merchant, category, or source…"
-                       oninput="filterRules()"
-                       class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-300">
+                    oninput="filterRules()"
+                    class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-300">
             </div>
-            <p class="text-xs text-gray-400 mt-2">Rules are learned automatically when you override a category. User overrides always take priority.</p>
+            <p class="text-xs text-gray-400 mt-2">Rules are learned automatically when you override a category. User
+                overrides always take priority.</p>
         </div>
         <div class="overflow-x-auto" style="max-height: 400px; overflow-y: auto;">
             <table class="w-full text-sm">
@@ -83,9 +89,11 @@
     <div class="fixed inset-0 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
             <!-- Header -->
-            <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between rounded-t-2xl z-10">
+            <div
+                class="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between rounded-t-2xl z-10">
                 <h3 class="text-lg font-semibold text-gray-900">Register Card / Account</h3>
-                <button onclick="closeModal()" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                <button onclick="closeModal()"
+                    class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -95,7 +103,7 @@
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Institution</label>
                     <select id="institutionId" name="institution_id"
-                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
                         <option value="">-- Select Bank --</option>
                     </select>
                 </div>
@@ -105,7 +113,7 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Account Type</label>
                         <select name="account_type" id="accountType"
-                                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
                             <option value="credit_card">Credit Card</option>
                             <option value="debit_card">Debit Card</option>
                             <option value="savings">Savings Account</option>
@@ -116,7 +124,7 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Card Network</label>
                         <select name="card_network"
-                                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
                             <option value="AMEX">American Express</option>
                             <option value="VISA">Visa</option>
                             <option value="MASTERCARD">Mastercard</option>
@@ -127,9 +135,10 @@
 
                 <!-- Card Number -->
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Card Number (masked)</label>
-                    <input type="text" name="account_number_masked" required placeholder="376948*****9844"
-                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Card Number <small>*(Do not
+                            enter full card number)</small></label>
+                    <input type="text" name="account_number_masked" required placeholder="123456******1234"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     <p class="text-xs text-gray-400 mt-1">Enter the masked number as shown on your statement</p>
                 </div>
 
@@ -137,13 +146,13 @@
                 <div class="grid grid-cols-5 gap-3">
                     <div class="col-span-3">
                         <label class="block text-xs font-medium text-gray-600 mb-1">Cardholder Name</label>
-                        <input type="text" name="cardholder_name" placeholder="JOBAER AHMED"
-                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        <input type="text" name="cardholder_name" placeholder="John Doe"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
                     <div class="col-span-2">
                         <label class="block text-xs font-medium text-gray-600 mb-1">Card Tier</label>
                         <select name="card_tier" id="cardTier"
-                                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
                             <option value="primary">Primary</option>
                             <option value="supplement">Supplement</option>
                         </select>
@@ -154,16 +163,17 @@
                 <div id="parentCardSection" class="hidden">
                     <label class="block text-xs font-medium text-gray-600 mb-1">Primary Card</label>
                     <select name="parent_account_id" id="parentAccountId"
-                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
                         <option value="">-- Select Primary Card --</option>
                     </select>
                 </div>
 
                 <!-- Nickname -->
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Nickname <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nickname <span
+                            class="text-gray-400 font-normal">(optional)</span></label>
                     <input type="text" name="account_nickname" placeholder="My Amex Gold"
-                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                 </div>
 
                 <!-- Credit Limit + Reward Program -->
@@ -171,12 +181,12 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Credit Limit (BDT)</label>
                         <input type="number" name="credit_limit" placeholder="400000"
-                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Reward Program</label>
                         <input type="text" name="reward_program_name" placeholder="MR Points"
-                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
                 </div>
 
@@ -185,7 +195,7 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Reward Type</label>
                         <select name="reward_type"
-                                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
                             <option value="points">Points</option>
                             <option value="cashback">Cashback</option>
                             <option value="miles">Miles</option>
@@ -194,7 +204,7 @@
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Points Expiry (months)</label>
                         <input type="number" name="reward_expiry_months" placeholder="36"
-                               class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                     </div>
                 </div>
 
@@ -203,15 +213,19 @@
                     <label class="block text-xs font-medium text-gray-600 mb-1">Card Color</label>
                     <div class="flex items-center gap-3">
                         <input type="color" name="color_hex" value="#1a73e8"
-                               class="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5">
+                            class="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5">
                         <span class="text-xs text-gray-400">Choose a color for the card accent</span>
                     </div>
                 </div>
             </form>
             <!-- Footer -->
-            <div class="sticky bottom-0 bg-white px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 rounded-b-2xl">
-                <button onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
-                <button onclick="submitAccount()" class="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">Register Card</button>
+            <div
+                class="sticky bottom-0 bg-white px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 rounded-b-2xl">
+                <button onclick="closeModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onclick="submitAccount()"
+                    class="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">Register
+                    Card</button>
             </div>
         </div>
     </div>
@@ -224,34 +238,37 @@
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md relative">
             <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-900">Edit Category Rule</h3>
-                <button onclick="closeEditModal()" class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                <button onclick="closeEditModal()"
+                    class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
             <form id="editRuleForm" class="px-6 py-5 space-y-4">
-                <div id="editRuleError" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
+                <div id="editRuleError"
+                    class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
                 <input type="hidden" id="editRuleId">
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Merchant Pattern</label>
                     <input type="text" id="editMerchantPattern" required
-                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                 </div>
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
                     <select id="editCategory"
-                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-medium text-gray-600 mb-1">Subcategory <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Subcategory <span
+                            class="text-gray-400 font-normal">(optional)</span></label>
                     <input type="text" id="editSubcategory"
-                           class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-gray-600 mb-1">Source</label>
                         <select id="editSource"
-                                class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
                             <option value="builtin">Built-in</option>
                             <option value="user_override">User Override</option>
                             <option value="claude_ai">Claude AI</option>
@@ -261,147 +278,151 @@
                         <label class="block text-xs font-medium text-gray-600 mb-1">Confidence</label>
                         <div class="flex items-center gap-2">
                             <input type="range" id="editConfidence" min="0" max="100" step="5"
-                                   class="flex-1 accent-indigo-600" oninput="document.getElementById('confLabel').textContent=this.value+'%'">
+                                class="flex-1 accent-indigo-600"
+                                oninput="document.getElementById('confLabel').textContent=this.value+'%'">
                             <span id="confLabel" class="text-xs text-gray-500 w-8 text-right">80%</span>
                         </div>
                     </div>
                 </div>
             </form>
             <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
-                <button onclick="closeEditModal()" class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
-                <button onclick="submitEditRule()" class="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">Save Changes</button>
+                <button onclick="closeEditModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onclick="submitEditRule()"
+                    class="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">Save
+                    Changes</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-const CATEGORIES = [
-    "Groceries", "Food & Dining", "Transport", "Health",
-    "Utilities", "Shopping", "Software & Tools", "Freelancing",
-    "Entertainment", "Fees & Charges", "Financial Services",
-    "Travel & Hotels", "Education", "Insurance", "Charity",
-    "Government & Tax", "Other"
-];
+    const CATEGORIES = [
+        "Groceries", "Food & Dining", "Transport", "Health",
+        "Utilities", "Shopping", "Software & Tools", "Freelancing",
+        "Entertainment", "Fees & Charges", "Financial Services",
+        "Travel & Hotels", "Education", "Insurance", "Charity",
+        "Government & Tax", "Other"
+    ];
 
-let allRules = [];
+    let allRules = [];
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadInstitutions();
-    loadAccounts();
-    loadRules();
-    populateEditCategoryDropdown();
-});
-
-document.getElementById('cardTier').addEventListener('change', function() {
-    document.getElementById('parentCardSection').classList.toggle('hidden', this.value !== 'supplement');
-});
-
-// --- Account Modal ---
-function openModal() {
-    document.getElementById('addAccountModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-function closeModal() {
-    document.getElementById('addAccountModal').classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-// --- Edit Rule Modal ---
-function openEditModal(ruleId) {
-    const rule = allRules.find(r => r.id === ruleId);
-    if (!rule) return;
-    document.getElementById('editRuleError').classList.add('hidden');
-    document.getElementById('editRuleError').textContent = '';
-    document.getElementById('editRuleId').value = rule.id;
-    document.getElementById('editMerchantPattern').value = rule.merchant_pattern;
-    document.getElementById('editCategory').value = rule.category;
-    document.getElementById('editSubcategory').value = rule.subcategory || '';
-    document.getElementById('editSource').value = rule.source;
-    const conf = Math.round(rule.confidence * 100);
-    document.getElementById('editConfidence').value = conf;
-    document.getElementById('confLabel').textContent = conf + '%';
-    document.getElementById('editRuleModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-}
-function closeEditModal() {
-    document.getElementById('editRuleModal').classList.add('hidden');
-    document.body.style.overflow = '';
-}
-
-function populateEditCategoryDropdown() {
-    const sel = document.getElementById('editCategory');
-    sel.innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
-}
-
-// --- Fuzzy search ---
-function fuzzyMatch(query, text) {
-    if (!query) return true;
-    const q = query.toLowerCase().replace(/\s+/g, '');
-    const t = text.toLowerCase().replace(/\s+/g, '');
-    // Exact substring match
-    if (t.includes(q)) return true;
-    // Fuzzy: each char in query must appear in order in text
-    let qi = 0;
-    for (let ti = 0; ti < t.length && qi < q.length; ti++) {
-        if (t[ti] === q[qi]) qi++;
-    }
-    return qi === q.length;
-}
-
-function filterRules() {
-    const query = document.getElementById('ruleSearch').value.trim();
-    const filtered = allRules.filter(r =>
-        fuzzyMatch(query, r.merchant_pattern) ||
-        fuzzyMatch(query, r.category) ||
-        fuzzyMatch(query, r.subcategory || '') ||
-        fuzzyMatch(query, r.source)
-    );
-    renderRules(filtered);
-}
-
-// --- Data loading ---
-async function loadInstitutions() {
-    const res = await fetch('/api/institutions');
-    const institutions = await res.json();
-    const sel = document.getElementById('institutionId');
-    institutions.forEach(inst => {
-        sel.innerHTML += `<option value="${inst.id}">${inst.name}</option>`;
-    });
-}
-
-const NETWORK_ICONS = {
-    AMEX: 'fab fa-cc-amex',
-    VISA: 'fab fa-cc-visa',
-    MASTERCARD: 'fab fa-cc-mastercard',
-};
-
-async function loadAccounts() {
-    const res = await fetch('/api/accounts');
-    const accounts = await res.json();
-    const grid = document.getElementById('accountsGrid');
-    const empty = document.getElementById('emptyState');
-    const parentSel = document.getElementById('parentAccountId');
-
-    if (!accounts.length) {
-        grid.innerHTML = '';
-        empty.classList.remove('hidden');
-        return;
-    }
-    empty.classList.add('hidden');
-
-    parentSel.innerHTML = '<option value="">-- Select Primary Card --</option>';
-    accounts.filter(a => a.card_tier === 'primary').forEach(a => {
-        parentSel.innerHTML += `<option value="${a.id}">${a.account_number_masked} — ${a.cardholder_name || ''}</option>`;
+    document.addEventListener('DOMContentLoaded', () => {
+        loadInstitutions();
+        loadAccounts();
+        loadRules();
+        populateEditCategoryDropdown();
     });
 
-    grid.innerHTML = accounts.map(a => {
-        const color = a.color_hex || '#6366f1';
-        const icon = NETWORK_ICONS[a.card_network] || 'fas fa-credit-card';
-        const tierBadge = a.card_tier === 'supplement'
-            ? `<span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">Supplement</span>`
-            : `<span class="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-medium">Primary</span>`;
-        return `
+    document.getElementById('cardTier').addEventListener('change', function () {
+        document.getElementById('parentCardSection').classList.toggle('hidden', this.value !== 'supplement');
+    });
+
+    // --- Account Modal ---
+    function openModal() {
+        document.getElementById('addAccountModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+        document.getElementById('addAccountModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    // --- Edit Rule Modal ---
+    function openEditModal(ruleId) {
+        const rule = allRules.find(r => r.id === ruleId);
+        if (!rule) return;
+        document.getElementById('editRuleError').classList.add('hidden');
+        document.getElementById('editRuleError').textContent = '';
+        document.getElementById('editRuleId').value = rule.id;
+        document.getElementById('editMerchantPattern').value = rule.merchant_pattern;
+        document.getElementById('editCategory').value = rule.category;
+        document.getElementById('editSubcategory').value = rule.subcategory || '';
+        document.getElementById('editSource').value = rule.source;
+        const conf = Math.round(rule.confidence * 100);
+        document.getElementById('editConfidence').value = conf;
+        document.getElementById('confLabel').textContent = conf + '%';
+        document.getElementById('editRuleModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeEditModal() {
+        document.getElementById('editRuleModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    function populateEditCategoryDropdown() {
+        const sel = document.getElementById('editCategory');
+        sel.innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    // --- Fuzzy search ---
+    function fuzzyMatch(query, text) {
+        if (!query) return true;
+        const q = query.toLowerCase().replace(/\s+/g, '');
+        const t = text.toLowerCase().replace(/\s+/g, '');
+        // Exact substring match
+        if (t.includes(q)) return true;
+        // Fuzzy: each char in query must appear in order in text
+        let qi = 0;
+        for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+            if (t[ti] === q[qi]) qi++;
+        }
+        return qi === q.length;
+    }
+
+    function filterRules() {
+        const query = document.getElementById('ruleSearch').value.trim();
+        const filtered = allRules.filter(r =>
+            fuzzyMatch(query, r.merchant_pattern) ||
+            fuzzyMatch(query, r.category) ||
+            fuzzyMatch(query, r.subcategory || '') ||
+            fuzzyMatch(query, r.source)
+        );
+        renderRules(filtered);
+    }
+
+    // --- Data loading ---
+    async function loadInstitutions() {
+        const res = await fetch('/api/institutions');
+        const institutions = await res.json();
+        const sel = document.getElementById('institutionId');
+        institutions.forEach(inst => {
+            sel.innerHTML += `<option value="${inst.id}">${inst.name}</option>`;
+        });
+    }
+
+    const NETWORK_ICONS = {
+        AMEX: 'fab fa-cc-amex',
+        VISA: 'fab fa-cc-visa',
+        MASTERCARD: 'fab fa-cc-mastercard',
+    };
+
+    async function loadAccounts() {
+        const res = await fetch('/api/accounts');
+        const accounts = await res.json();
+        const grid = document.getElementById('accountsGrid');
+        const empty = document.getElementById('emptyState');
+        const parentSel = document.getElementById('parentAccountId');
+
+        if (!accounts.length) {
+            grid.innerHTML = '';
+            empty.classList.remove('hidden');
+            return;
+        }
+        empty.classList.add('hidden');
+
+        parentSel.innerHTML = '<option value="">-- Select Primary Card --</option>';
+        accounts.filter(a => a.card_tier === 'primary').forEach(a => {
+            parentSel.innerHTML += `<option value="${a.id}">${a.account_number_masked} — ${a.cardholder_name || ''}</option>`;
+        });
+
+        grid.innerHTML = accounts.map(a => {
+            const color = a.color_hex || '#6366f1';
+            const icon = NETWORK_ICONS[a.card_network] || 'fas fa-credit-card';
+            const tierBadge = a.card_tier === 'supplement'
+                ? `<span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">Supplement</span>`
+                : `<span class="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-medium">Primary</span>`;
+            return `
         <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
             <div class="h-1.5" style="background: linear-gradient(90deg, ${color}, ${color}88)"></div>
             <div class="p-5">
@@ -435,35 +456,35 @@ async function loadAccounts() {
                 </div>
             </div>
         </div>`;
-    }).join('');
-}
-
-async function loadRules() {
-    const res = await fetch('/api/categories/rules?limit=200');
-    allRules = await res.json();
-    document.getElementById('ruleCount').textContent = `${allRules.length} rules`;
-    document.getElementById('ruleSearch').value = '';
-    renderRules(allRules);
-}
-
-const SOURCE_STYLES = {
-    'user_override': 'bg-emerald-50 text-emerald-700',
-    'claude_ai': 'bg-purple-50 text-purple-700',
-    'builtin': 'bg-blue-50 text-blue-700',
-};
-
-function renderRules(rules) {
-    const tbody = document.getElementById('rulesTableBody');
-    const noResults = document.getElementById('noResults');
-
-    if (!rules.length) {
-        tbody.innerHTML = '';
-        noResults.classList.remove('hidden');
-        return;
+        }).join('');
     }
-    noResults.classList.add('hidden');
 
-    tbody.innerHTML = rules.map(r => `
+    async function loadRules() {
+        const res = await fetch('/api/categories/rules?limit=200');
+        allRules = await res.json();
+        document.getElementById('ruleCount').textContent = `${allRules.length} rules`;
+        document.getElementById('ruleSearch').value = '';
+        renderRules(allRules);
+    }
+
+    const SOURCE_STYLES = {
+        'user_override': 'bg-emerald-50 text-emerald-700',
+        'claude_ai': 'bg-purple-50 text-purple-700',
+        'builtin': 'bg-blue-50 text-blue-700',
+    };
+
+    function renderRules(rules) {
+        const tbody = document.getElementById('rulesTableBody');
+        const noResults = document.getElementById('noResults');
+
+        if (!rules.length) {
+            tbody.innerHTML = '';
+            noResults.classList.remove('hidden');
+            return;
+        }
+        noResults.classList.add('hidden');
+
+        tbody.innerHTML = rules.map(r => `
         <tr class="hover:bg-gray-50/50 group">
             <td class="px-5 py-2.5 font-mono text-xs text-gray-700">${esc(r.merchant_pattern)}</td>
             <td class="px-3 py-2.5 text-xs font-medium text-gray-700">${esc(r.category)}</td>
@@ -487,75 +508,75 @@ function renderRules(rules) {
             </td>
         </tr>
     `).join('');
-}
-
-function esc(s) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
-
-async function submitAccount() {
-    const form = document.getElementById('addAccountForm');
-    const data = {};
-    new FormData(form).forEach((v, k) => { if (v) data[k] = v; });
-    if (data.credit_limit) data.credit_limit = parseFloat(data.credit_limit);
-    if (data.reward_expiry_months) data.reward_expiry_months = parseInt(data.reward_expiry_months);
-    if (data.parent_account_id) data.parent_account_id = parseInt(data.parent_account_id);
-    if (data.institution_id) data.institution_id = parseInt(data.institution_id);
-
-    const res = await fetch('/api/accounts', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data),
-    });
-    if (res.ok) {
-        closeModal();
-        form.reset();
-        loadAccounts();
-    } else {
-        const err = await res.json();
-        alert('Error: ' + (err.detail || JSON.stringify(err)));
     }
-}
 
-async function submitEditRule() {
-    const errEl = document.getElementById('editRuleError');
-    errEl.classList.add('hidden');
-    errEl.textContent = '';
+    function esc(s) { return s ? s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }
 
-    const ruleId = document.getElementById('editRuleId').value;
-    const body = {
-        merchant_pattern: document.getElementById('editMerchantPattern').value,
-        category: document.getElementById('editCategory').value,
-        subcategory: document.getElementById('editSubcategory').value || null,
-        source: document.getElementById('editSource').value,
-        confidence: parseInt(document.getElementById('editConfidence').value) / 100,
-    };
+    async function submitAccount() {
+        const form = document.getElementById('addAccountForm');
+        const data = {};
+        new FormData(form).forEach((v, k) => { if (v) data[k] = v; });
+        if (data.credit_limit) data.credit_limit = parseFloat(data.credit_limit);
+        if (data.reward_expiry_months) data.reward_expiry_months = parseInt(data.reward_expiry_months);
+        if (data.parent_account_id) data.parent_account_id = parseInt(data.parent_account_id);
+        if (data.institution_id) data.institution_id = parseInt(data.institution_id);
 
-    const res = await fetch(`/api/categories/rules/${ruleId}`, {
-        method: 'PUT',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(body),
-    });
-
-    if (res.ok) {
-        closeEditModal();
-        await loadRules();
-    } else {
-        const err = await res.json();
-        errEl.textContent = err.detail || 'Failed to update rule. Please try again.';
-        errEl.classList.remove('hidden');
+        const res = await fetch('/api/accounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (res.ok) {
+            closeModal();
+            form.reset();
+            loadAccounts();
+        } else {
+            const err = await res.json();
+            alert('Error: ' + (err.detail || JSON.stringify(err)));
+        }
     }
-}
 
-async function seedRules() {
-    const res = await fetch('/api/categories/rules/seed', {method: 'POST'});
-    const data = await res.json();
-    alert(data.message);
-    loadRules();
-}
+    async function submitEditRule() {
+        const errEl = document.getElementById('editRuleError');
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
 
-async function deleteRule(id) {
-    if (!confirm('Deactivate this rule?')) return;
-    await fetch(`/api/categories/rules/${id}`, {method: 'DELETE'});
-    loadRules();
-}
+        const ruleId = document.getElementById('editRuleId').value;
+        const body = {
+            merchant_pattern: document.getElementById('editMerchantPattern').value,
+            category: document.getElementById('editCategory').value,
+            subcategory: document.getElementById('editSubcategory').value || null,
+            source: document.getElementById('editSource').value,
+            confidence: parseInt(document.getElementById('editConfidence').value) / 100,
+        };
+
+        const res = await fetch(`/api/categories/rules/${ruleId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+
+        if (res.ok) {
+            closeEditModal();
+            await loadRules();
+        } else {
+            const err = await res.json();
+            errEl.textContent = err.detail || 'Failed to update rule. Please try again.';
+            errEl.classList.remove('hidden');
+        }
+    }
+
+    async function seedRules() {
+        const res = await fetch('/api/categories/rules/seed', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+        loadRules();
+    }
+
+    async function deleteRule(id) {
+        if (!confirm('Deactivate this rule?')) return;
+        await fetch(`/api/categories/rules/${id}`, { method: 'DELETE' });
+        loadRules();
+    }
 </script>
 {% endblock %}

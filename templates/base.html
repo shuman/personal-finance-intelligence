@@ -148,6 +148,15 @@
         input[type="number"] {
             -moz-appearance: textfield;
         }
+
+        /* Encryption badge tooltip */
+        .encryption-badge .encryption-tooltip {
+            display: none;
+        }
+        .encryption-badge:hover .encryption-tooltip,
+        .encryption-badge.tooltip-open .encryption-tooltip {
+            display: block;
+        }
     </style>
 </head>
 
@@ -320,6 +329,8 @@
                 <a href="/privacy" class="text-gray-500 hover:text-gray-700">Privacy</a>
                 <span>&middot;</span>
                 <a href="/terms" class="text-gray-500 hover:text-gray-700">Terms</a>
+                <span>&middot;</span>
+                <span class="text-emerald-500/60"><i class="fas fa-shield-halved"></i> AES Encrypted</span>
             </div>
         </div>
     </footer>
@@ -386,6 +397,33 @@
         }    </script>
 
     {% block extra_scripts %}{% endblock %}
+
+    <!-- Encryption badge tooltip behavior -->
+    <script>
+    (function() {
+        function closeAllTooltips(except) {
+            document.querySelectorAll('.encryption-badge.tooltip-open').forEach(b => {
+                if (b !== except) b.classList.remove('tooltip-open');
+            });
+        }
+        // Hover (desktop)
+        document.addEventListener('mouseover', e => {
+            const badge = e.target.closest('.encryption-badge');
+            if (badge) {
+                closeAllTooltips(badge);
+                badge.classList.add('tooltip-open');
+            }
+        });
+        document.addEventListener('mouseout', e => {
+            const badge = e.target.closest('.encryption-badge');
+            if (badge) badge.classList.remove('tooltip-open');
+        });
+        // Click-outside to close (mobile tap toggle is via onclick in the element)
+        document.addEventListener('click', e => {
+            if (!e.target.closest('.encryption-badge')) closeAllTooltips();
+        });
+    })();
+    </script>
 
     <!-- Service Worker Registration -->
     <script>

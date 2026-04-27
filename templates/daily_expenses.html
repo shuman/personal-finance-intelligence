@@ -7,7 +7,10 @@
     <!-- Header -->
     <div class="mb-6">
         <h1 class="text-3xl font-bold text-gray-900">Daily Expenses</h1>
-        <p class="text-gray-600 mt-2">Quick cash expense logging with AI categorization</p>
+        <p class="text-gray-600 mt-2 inline">Quick cash expense logging with AI categorization</p>
+        {% with fields=["description_raw", "description_normalized"] %}
+        {% include "includes/encryption_badge.html" %}
+        {% endwith %}
     </div>
 
     <!-- Quick Add Form (Always visible at top) -->

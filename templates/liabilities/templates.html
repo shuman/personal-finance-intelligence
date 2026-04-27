@@ -9,7 +9,10 @@
             <a href="/liabilities/dashboard" class="hover:text-indigo-600"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
         </div>
         <h1 class="text-2xl font-bold tracking-tight text-gray-900">Liability Templates</h1>
-        <p class="text-sm text-gray-500 mt-1">Create your regular monthly liability items here, like rent, loan payments, or salaries. When you generate a new month, these active templates are copied into that month's liability list automatically.</p>
+        <p class="text-sm text-gray-500 mt-1 inline">Create your regular monthly liability items here, like rent, loan payments, or salaries. When you generate a new month, these active templates are copied into that month's liability list automatically.</p>
+        {% with fields=["name", "status"] %}
+        {% include "includes/encryption_badge.html" %}
+        {% endwith %}
     </div>
 </div>
 

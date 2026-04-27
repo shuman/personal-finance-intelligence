@@ -7,7 +7,10 @@
     <!-- Header -->
     <div class="mb-6">
         <h1 class="text-3xl font-bold text-gray-900">Income Tracker</h1>
-        <p class="text-gray-600 mt-2">Track your income sources and earnings</p>
+        <p class="text-gray-600 mt-2 inline">Track your income sources and earnings</p>
+        {% with fields=["description_raw", "description_normalized"] %}
+        {% include "includes/encryption_badge.html" %}
+        {% endwith %}
     </div>
 
     <!-- Quick Add Form -->

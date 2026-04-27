@@ -11,7 +11,10 @@
             <h1 class="text-2xl font-bold text-gray-900">
                 <i class="fas fa-eye text-blue-600 mr-2"></i>Review & Edit
             </h1>
-            <p class="text-sm text-gray-500 mt-0.5">Check everything before saving. You can edit any field.</p>
+            <p class="text-sm text-gray-500 mt-0.5 inline">Check everything before saving. You can edit any field.</p>
+            {% with fields=["filename", "password", "account details", "balances", "transactions", "merchant names"] %}
+            {% include "includes/encryption_badge.html" %}
+            {% endwith %}
         </div>
         <a href="/" class="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 mt-1">
             <i class="fas fa-arrow-left text-xs"></i> Upload another

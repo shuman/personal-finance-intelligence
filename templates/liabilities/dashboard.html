@@ -44,7 +44,10 @@
 <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
         <h1 class="text-2xl font-bold tracking-tight text-gray-900">Monthly Liabilities Tracker</h1>
-        <p class="text-sm text-gray-500 mt-1">Manage and track your monthly recurring payments</p>
+        <p class="text-sm text-gray-500 mt-1 inline">Manage and track your monthly recurring payments</p>
+        {% with fields=["name", "status"] %}
+        {% include "includes/encryption_badge.html" %}
+        {% endwith %}
     </div>
     <div class="flex items-center gap-3">
         <a href="/liabilities/templates" class="text-sm font-medium text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg hover:bg-indigo-100 transition-colors">

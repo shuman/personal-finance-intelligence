@@ -1,0 +1,18 @@
+{# Reusable encryption badge partial. Pass `fields` as a list of field names. #}
+<span class="encryption-badge relative inline-flex items-center ml-2 align-middle cursor-pointer select-none"
+      onclick="this.classList.toggle('tooltip-open')">
+    <span class="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200/60 text-emerald-700 rounded-full px-2.5 py-0.5 text-xs font-medium">
+        <i class="fas fa-shield-halved text-[10px]"></i>
+        <span class="hidden sm:inline">Encrypted</span>
+    </span>
+    <span class="encryption-tooltip hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 bg-gray-900 text-white rounded-lg shadow-xl p-3 text-xs z-[60] pointer-events-none">
+        <p class="font-semibold text-sm mb-1">Field-Level Encryption Active</p>
+        <p class="text-gray-400 mb-2">Your data is encrypted with AES-128 before storage.</p>
+        <div class="flex flex-wrap gap-1">
+            {% for field in fields %}
+            <span class="bg-emerald-900/40 text-emerald-300 px-1.5 py-0.5 rounded text-[10px]">{{ field }}</span>
+            {% endfor %}
+        </div>
+        <span class="absolute top-full left-1/2 -translate-x-1/2 -mt-px border-4 border-transparent border-t-gray-900"></span>
+    </span>
+</span>
