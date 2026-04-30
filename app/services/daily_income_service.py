@@ -68,7 +68,7 @@ class DailyIncomeService:
             description_raw=description.strip(),
             source_type=source_type,
             transaction_date=transaction_date,
-            ai_status="draft",
+            ai_status="processed",
             created_at=datetime.utcnow(),
         )
 

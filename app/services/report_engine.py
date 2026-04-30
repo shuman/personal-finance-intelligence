@@ -178,10 +178,9 @@ class ReportEngine:
         period_to: date,
         user_id: Optional[int] = None,
     ) -> List[DailyIncome]:
-        """Fetch processed DailyIncome rows for a period (excludes drafts)."""
+        """Fetch DailyIncome rows for a period."""
         query = select(DailyIncome).where(
             DailyIncome.transaction_date.between(period_from, period_to),
-            DailyIncome.ai_status == "processed",
         )
         if user_id is not None:
             query = query.where(DailyIncome.user_id == user_id)
@@ -224,7 +223,6 @@ class ReportEngine:
                 func.coalesce(func.sum(DailyIncome.amount), 0),
             ).where(
                 DailyIncome.transaction_date.between(period_from, period_to),
-                DailyIncome.ai_status == "processed",
             )
             if user_id is not None:
                 query = query.where(DailyIncome.user_id == user_id)
