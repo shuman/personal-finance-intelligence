@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, delete
+from sqlalchemy import select, update, delete, or_, and_
 from pydantic import BaseModel
 from typing import List, Optional
 from decimal import Decimal
@@ -133,12 +133,49 @@ async def get_monthly_record(year: int, month: int, db: AsyncSession = Depends(g
     result = await db.execute(stmt)
     record = result.scalars().first()
 
+    # Overdue: query all past MonthlyRecords with their liabilities
+    overdue_stmt = (
+        select(MonthlyRecord)
+        .where(
+            MonthlyRecord.user_id == current_user.id,
+            or_(
+                MonthlyRecord.year < year,
+                and_(MonthlyRecord.year == year, MonthlyRecord.month < month)
+            )
+        )
+        .options(selectinload(MonthlyRecord.liabilities))
+    )
+    overdue_result = await db.execute(overdue_stmt)
+    past_records = overdue_result.scalars().all()
+
+    month_names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    overdue_items = []
+    for rec in past_records:
+        for liab in rec.liabilities:
+            if liab.status != "Paid":
+                overdue_items.append({
+                    "id": liab.id,
+                    "name": liab.name,
+                    "amount": float(liab.amount) if liab.amount else 0,
+                    "status": liab.status,
+                    "priority": liab.priority,
+                    "paid_amount": float(liab.paid_amount) if liab.paid_amount else None,
+                    "paid_date": str(liab.paid_date) if liab.paid_date else None,
+                    "source_month": f"{rec.year}-{rec.month:02d}",
+                    "source_month_label": f"{month_names[rec.month - 1]} {rec.year}",
+                })
+
+    overdue_summary = {
+        "count": len(overdue_items),
+        "total_amount": sum(i["amount"] for i in overdue_items),
+    }
+
     if record:
         liabilities = record.liabilities
         liabilities.sort(key=lambda x: (x.sort_order, x.id))
-        return {"data": record, "liabilities": liabilities}
+        return {"data": record, "liabilities": liabilities, "overdue": overdue_items, "overdue_summary": overdue_summary}
 
-    return {"data": None, "liabilities": []}
+    return {"data": None, "liabilities": [], "overdue": overdue_items, "overdue_summary": overdue_summary}
 
 @router.post("/api/months/{year}/{month}/generate")
 async def generate_month(year: int, month: int, db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
@@ -263,3 +300,32 @@ async def reorder_liabilities(items: List[ReorderItem], db: AsyncSession = Depen
             liability.sort_order = item.sort_order
     await db.commit()
     return {"status": "success"}
+
+@router.get("/api/overdue-summary")
+async def get_overdue_summary(db: AsyncSession = Depends(get_db), current_user: User = Depends(get_current_user)):
+    today = date.today()
+    year, month = today.year, today.month
+
+    overdue_stmt = (
+        select(MonthlyRecord)
+        .where(
+            MonthlyRecord.user_id == current_user.id,
+            or_(
+                MonthlyRecord.year < year,
+                and_(MonthlyRecord.year == year, MonthlyRecord.month < month)
+            )
+        )
+        .options(selectinload(MonthlyRecord.liabilities))
+    )
+    result = await db.execute(overdue_stmt)
+    past_records = result.scalars().all()
+
+    count = 0
+    total_amount = 0
+    for rec in past_records:
+        for liab in rec.liabilities:
+            if liab.status != "Paid":
+                count += 1
+                total_amount += float(liab.amount) if liab.amount else 0
+
+    return {"count": count, "total_amount": total_amount}

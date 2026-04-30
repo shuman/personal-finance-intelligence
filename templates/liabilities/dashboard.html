@@ -120,6 +120,33 @@
     </div>
 </div>
 
+<!-- Overdue from Previous Months -->
+<div id="overdue-section" class="hidden mb-6 bg-red-50/60 border border-red-200 rounded-xl overflow-hidden">
+    <div class="px-5 py-3 bg-red-100/60 border-b border-red-200 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-exclamation-triangle text-red-500"></i>
+            <h3 class="text-sm font-bold text-red-700 uppercase tracking-wide">Overdue from Previous Months</h3>
+            <span id="overdue-count-badge" class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">0</span>
+        </div>
+        <span id="overdue-total-label" class="text-sm font-semibold text-red-600">৳0</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-red-100">
+            <thead class="bg-red-50 text-[11px] font-bold text-red-400 uppercase tracking-wider">
+                <tr>
+                    <th class="px-4 py-2 text-left">Source Month</th>
+                    <th class="px-4 py-2 text-left">Item Name</th>
+                    <th class="px-4 py-2 text-left">Priority</th>
+                    <th class="px-4 py-2 text-right">Amount</th>
+                    <th class="px-4 py-2 text-center">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-red-50 text-sm" id="overdue-tbody">
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Main Table Area -->
 <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" id="table-container">
     <div id="loading" class="p-12 text-center text-gray-400">
@@ -194,6 +221,7 @@
     let currentData = [];
     let currentRecordId = null;
     let sortableInst = null;
+    let overdueData = [];
     
     const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     
@@ -240,7 +268,10 @@
             const m = currentDate.getMonth() + 1;
             const res = await fetch(`/liabilities/api/months/${y}/${m}`);
             const data = await res.json();
-            
+
+            overdueData = data.overdue || [];
+            renderOverdue();
+
             if (!data.data) {
                 currentRecordId = null;
                 document.getElementById('loading').classList.add('hidden');
@@ -532,7 +563,45 @@
             document.getElementById(`sum-${p}-due`).textContent = `৳${formatCurrency(stats[cat].due)}`;
         });
     }
-    
+
+    function renderOverdue() {
+        const section = document.getElementById('overdue-section');
+        const tbody = document.getElementById('overdue-tbody');
+        const badge = document.getElementById('overdue-count-badge');
+        const totalLabel = document.getElementById('overdue-total-label');
+
+        if (!overdueData || overdueData.length === 0) {
+            section.classList.add('hidden');
+            return;
+        }
+
+        section.classList.remove('hidden');
+        badge.textContent = overdueData.length;
+        totalLabel.textContent = '৳' + formatCurrency(overdueData.reduce((s, i) => s + i.amount, 0));
+
+        tbody.innerHTML = '';
+        overdueData.forEach(item => {
+            const tr = document.createElement('tr');
+            tr.className = 'hover:bg-red-50/50 transition-colors';
+
+            let statusBtn = `<button onclick="toggleStatus(${item.id}, 'Paid')" class="px-2 py-1.5 rounded bg-rose-50 text-rose-600 border border-rose-100 font-semibold text-[11px] uppercase tracking-wide hover:bg-rose-100 transition shadow-sm">Unpaid</button>`;
+            if (item.status === 'Partially Paid') {
+                statusBtn = `<button onclick="toggleStatus(${item.id}, 'Paid')" class="px-2 py-1.5 rounded bg-amber-50 text-amber-600 border border-amber-200 font-semibold text-[11px] uppercase tracking-wide hover:bg-amber-100 transition shadow-sm">Partial</button>`;
+            }
+
+            const priClass = getPriorityColor(item.priority);
+
+            tr.innerHTML = `
+                <td class="px-4 py-2 text-xs font-medium text-red-600">${item.source_month_label}</td>
+                <td class="px-4 py-2 font-medium text-gray-900">${item.name}</td>
+                <td class="px-4 py-2"><span class="text-xs font-semibold px-2 py-0.5 rounded ${priClass}">${item.priority}</span></td>
+                <td class="px-4 py-2 text-right font-medium text-gray-900">৳${formatCurrency(item.amount)}</td>
+                <td class="px-4 py-2 text-center">${statusBtn}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
     updateDateDisplay();
 </script>
 {% endblock %}
