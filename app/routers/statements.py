@@ -322,57 +322,6 @@ async def export_transactions_csv(
     )
 
 
-@router.get("/analytics/dashboard")
-async def get_dashboard_analytics(
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    Get dashboard analytics across all statements.
-
-    Returns overall spending trends, category analysis, and summary metrics.
-    """
-    service = StatementService(db)
-
-    # Get all statements
-    statements = await service.get_all_statements(user_id=current_user.id, limit=12)  # Last 12 statements
-
-    if not statements:
-        return {
-            "total_statements": 0,
-            "total_spending": 0,
-            "avg_monthly_spending": 0,
-            "statements": []
-        }
-
-    total_spending = sum(
-        stmt.purchases or 0
-        for stmt in statements
-    )
-
-    return {
-        "total_statements": len(statements),
-        "total_spending": total_spending,
-        "avg_monthly_spending": total_spending / len(statements) if statements else 0,
-        "latest_statement": {
-            "id": statements[0].id,
-            "date": statements[0].statement_date,
-            "amount_due": statements[0].total_amount_due,
-            "credit_utilization": statements[0].credit_utilization_pct
-        } if statements else None,
-        "statements": [
-            {
-                "id": stmt.id,
-                "date": stmt.statement_date,
-                "spending": stmt.purchases,
-                "fees": stmt.fees_charged,
-                "interest": stmt.interest_charged
-            }
-            for stmt in statements
-        ]
-    }
-
-
 @router.delete("/statements/{statement_id}")
 async def delete_statement(
     statement_id: int,

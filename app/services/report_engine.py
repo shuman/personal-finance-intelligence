@@ -178,9 +178,10 @@ class ReportEngine:
         period_to: date,
         user_id: Optional[int] = None,
     ) -> List[DailyIncome]:
-        """Fetch all DailyIncome rows for a period."""
+        """Fetch processed DailyIncome rows for a period (excludes drafts)."""
         query = select(DailyIncome).where(
             DailyIncome.transaction_date.between(period_from, period_to),
+            DailyIncome.ai_status == "processed",
         )
         if user_id is not None:
             query = query.where(DailyIncome.user_id == user_id)
@@ -223,6 +224,7 @@ class ReportEngine:
                 func.coalesce(func.sum(DailyIncome.amount), 0),
             ).where(
                 DailyIncome.transaction_date.between(period_from, period_to),
+                DailyIncome.ai_status == "processed",
             )
             if user_id is not None:
                 query = query.where(DailyIncome.user_id == user_id)
@@ -241,21 +243,41 @@ class ReportEngine:
         month: int,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> Dict[str, Any]:
         period_from, period_to = self._period_bounds(year, month)
 
-        # Current month
-        txns = await self._get_debit_transactions(period_from, period_to, account_id, user_id=user_id)
-        by_cat = await self._category_distribution(txns)
+        # --- Current month ---
+        by_cat: Dict[str, float] = {}
+        if payment_source in ("all", "card"):
+            txns = await self._get_debit_transactions(period_from, period_to, account_id, user_id=user_id)
+            cc_cat = await self._category_distribution(txns)
+            for cat, amt in cc_cat.items():
+                by_cat[cat] = by_cat.get(cat, 0) + amt
+        if payment_source in ("all", "cash"):
+            expenses = await self._get_daily_expenses(period_from, period_to, user_id=user_id)
+            cash_cat = self._daily_expense_category_distribution(expenses)
+            for cat, amt in cash_cat.items():
+                by_cat[cat] = by_cat.get(cat, 0) + amt
+
         total = sum(by_cat.values())
 
-        # Previous month for trend arrows
+        # --- Previous month for trend arrows ---
         prev_month_date = period_from - timedelta(days=1)
         prev_from, prev_to = self._period_bounds(
             prev_month_date.year, prev_month_date.month
         )
-        prev_txns = await self._get_debit_transactions(prev_from, prev_to, account_id, user_id=user_id)
-        prev_by_cat = await self._category_distribution(prev_txns)
+        prev_by_cat: Dict[str, float] = {}
+        if payment_source in ("all", "card"):
+            prev_txns = await self._get_debit_transactions(prev_from, prev_to, account_id, user_id=user_id)
+            prev_cc = await self._category_distribution(prev_txns)
+            for cat, amt in prev_cc.items():
+                prev_by_cat[cat] = prev_by_cat.get(cat, 0) + amt
+        if payment_source in ("all", "cash"):
+            prev_exp = await self._get_daily_expenses(prev_from, prev_to, user_id=user_id)
+            prev_cash = self._daily_expense_category_distribution(prev_exp)
+            for cat, amt in prev_cash.items():
+                prev_by_cat[cat] = prev_by_cat.get(cat, 0) + amt
         prev_total = sum(prev_by_cat.values())
 
         categories = []
@@ -293,20 +315,32 @@ class ReportEngine:
         month: int,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> Dict[str, Any]:
         period_from, period_to = self._period_bounds(year, month)
-        txns = await self._get_debit_transactions(period_from, period_to, account_id, user_id=user_id)
 
         merchant_data: Dict[str, Dict[str, Any]] = {}
         total = 0.0
-        for t in txns:
-            name = t.merchant_name or (t.description_raw or "")[:30]
-            amount = float(t.billing_amount or t.amount or 0)
-            total += amount
-            if name not in merchant_data:
-                merchant_data[name] = {"amount": 0.0, "txns": 0}
-            merchant_data[name]["amount"] += amount
-            merchant_data[name]["txns"] += 1
+        if payment_source in ("all", "card"):
+            txns = await self._get_debit_transactions(period_from, period_to, account_id, user_id=user_id)
+            for t in txns:
+                name = t.merchant_name or (t.description_raw or "")[:30]
+                amount = float(t.billing_amount or t.amount or 0)
+                total += amount
+                if name not in merchant_data:
+                    merchant_data[name] = {"amount": 0.0, "txns": 0}
+                merchant_data[name]["amount"] += amount
+                merchant_data[name]["txns"] += 1
+        if payment_source in ("all", "cash"):
+            expenses = await self._get_daily_expenses(period_from, period_to, user_id=user_id)
+            for e in expenses:
+                name = (e.description_raw or "Cash expense")[:30]
+                amount = float(e.amount or 0)
+                total += amount
+                if name not in merchant_data:
+                    merchant_data[name] = {"amount": 0.0, "txns": 0}
+                merchant_data[name]["amount"] += amount
+                merchant_data[name]["txns"] += 1
 
         # Sort by amount descending, take top 10
         sorted_merchants = sorted(
@@ -348,6 +382,7 @@ class ReportEngine:
         month: int,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> Dict[str, Any]:
         """Use SubscriptionDetector for multi-layer subscription detection."""
         detector = SubscriptionDetector(self.db)
@@ -943,20 +978,49 @@ class ReportEngine:
         self,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> List[Dict[str, Any]]:
         """12-month bar chart data: [{month: 'YYYY-MM', total: N}, ...]."""
-        return await self._monthly_totals(12, account_id, user_id=user_id)
+        cc_totals = await self._monthly_totals(12, account_id, user_id=user_id)
+        if payment_source == "card":
+            return cc_totals
+
+        cash_totals = await self._daily_expense_monthly_totals(12, user_id=user_id)
+        if payment_source == "cash":
+            return cash_totals
+
+        # Merge both by month
+        cash_map = {m["month"]: m["total"] for m in cash_totals}
+        return [
+            {
+                "month": m["month"],
+                "total": round(m["total"] + cash_map.get(m["month"], 0), 2),
+            }
+            for m in cc_totals
+        ]
 
     async def yearly_category_breakdown(
         self,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> Dict[str, Any]:
         """Aggregated category distribution across the last 12 months."""
         today = date.today()
         start = today - timedelta(days=365)
-        txns = await self._get_debit_transactions(start, today, account_id, user_id=user_id)
-        by_cat = await self._category_distribution(txns)
+
+        by_cat: Dict[str, float] = {}
+        if payment_source in ("all", "card"):
+            txns = await self._get_debit_transactions(start, today, account_id, user_id=user_id)
+            cc_cat = await self._category_distribution(txns)
+            for cat, amt in cc_cat.items():
+                by_cat[cat] = by_cat.get(cat, 0) + amt
+        if payment_source in ("all", "cash"):
+            expenses = await self._get_daily_expenses(start, today, user_id=user_id)
+            cash_cat = self._daily_expense_category_distribution(expenses)
+            for cat, amt in cash_cat.items():
+                by_cat[cat] = by_cat.get(cat, 0) + amt
+
         total = sum(by_cat.values())
 
         categories = []
@@ -977,22 +1041,34 @@ class ReportEngine:
         self,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> Dict[str, Any]:
         """Top 10 merchants across the last 12 months."""
         today = date.today()
         start = today - timedelta(days=365)
-        txns = await self._get_debit_transactions(start, today, account_id, user_id=user_id)
 
         merchant_data: Dict[str, Dict[str, Any]] = {}
         total = 0.0
-        for t in txns:
-            name = t.merchant_name or (t.description_raw or "")[:30]
-            amount = float(t.billing_amount or t.amount or 0)
-            total += amount
-            if name not in merchant_data:
-                merchant_data[name] = {"amount": 0.0, "txns": 0}
-            merchant_data[name]["amount"] += amount
-            merchant_data[name]["txns"] += 1
+        if payment_source in ("all", "card"):
+            txns = await self._get_debit_transactions(start, today, account_id, user_id=user_id)
+            for t in txns:
+                name = t.merchant_name or (t.description_raw or "")[:30]
+                amount = float(t.billing_amount or t.amount or 0)
+                total += amount
+                if name not in merchant_data:
+                    merchant_data[name] = {"amount": 0.0, "txns": 0}
+                merchant_data[name]["amount"] += amount
+                merchant_data[name]["txns"] += 1
+        if payment_source in ("all", "cash"):
+            expenses = await self._get_daily_expenses(start, today, user_id=user_id)
+            for e in expenses:
+                name = (e.description_raw or "Cash expense")[:30]
+                amount = float(e.amount or 0)
+                total += amount
+                if name not in merchant_data:
+                    merchant_data[name] = {"amount": 0.0, "txns": 0}
+                merchant_data[name]["amount"] += amount
+                merchant_data[name]["txns"] += 1
 
         sorted_merchants = sorted(
             merchant_data.items(), key=lambda x: x[1]["amount"], reverse=True
@@ -1077,27 +1153,36 @@ class ReportEngine:
         self,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> Dict[str, Any]:
         """KPI cards: total spent, avg monthly, highest/lowest month, total txns, unique merchants."""
         today = date.today()
         start = today - timedelta(days=365)
-        txns = await self._get_debit_transactions(start, today, account_id, user_id=user_id)
 
-        total_spent = sum(float(t.billing_amount or t.amount or 0) for t in txns)
-        total_txns = len(txns)
+        total_spent = 0.0
+        total_txns = 0
+        unique_names: set = set()
+
+        if payment_source in ("all", "card"):
+            txns = await self._get_debit_transactions(start, today, account_id, user_id=user_id)
+            total_spent += sum(float(t.billing_amount or t.amount or 0) for t in txns)
+            total_txns += len(txns)
+            unique_names.update(
+                t.merchant_name or (t.description_raw or "")[:30] for t in txns
+            )
+        if payment_source in ("all", "cash"):
+            expenses = await self._get_daily_expenses(start, today, user_id=user_id)
+            total_spent += sum(float(e.amount or 0) for e in expenses)
+            total_txns += len(expenses)
+            unique_names.update((e.description_raw or "Cash expense")[:30] for e in expenses)
 
         # Monthly breakdown for avg/highest/lowest
-        monthly = await self._monthly_totals(12, account_id, user_id=user_id)
+        monthly = await self.yearly_monthly_totals(account_id, user_id=user_id, payment_source=payment_source)
         totals = [m["total"] for m in monthly if m["total"] > 0]
         avg_monthly = round(sum(totals) / len(totals), 2) if totals else 0
 
         highest_month = max(monthly, key=lambda m: m["total"]) if monthly else {"month": "—", "total": 0}
         lowest_month = min([m for m in monthly if m["total"] > 0], key=lambda m: m["total"]) if any(m["total"] > 0 for m in monthly) else {"month": "—", "total": 0}
-
-        # Unique merchants
-        unique_merchants = len({
-            t.merchant_name or (t.description_raw or "")[:30] for t in txns
-        })
 
         return {
             "total_spent": round(total_spent, 2),
@@ -1105,7 +1190,7 @@ class ReportEngine:
             "highest_month": highest_month,
             "lowest_month": lowest_month,
             "total_transactions": total_txns,
-            "unique_merchants": unique_merchants,
+            "unique_merchants": len(unique_names),
         }
 
     # ------------------------------------------------------------------
@@ -1319,15 +1404,16 @@ class ReportEngine:
         self,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> Dict[str, Any]:
         """Run all yearly dashboard reports and return as a single dict."""
         return {
-            "monthly_totals": await self.yearly_monthly_totals(account_id, user_id=user_id),
-            "category_breakdown": await self.yearly_category_breakdown(account_id, user_id=user_id),
-            "top_merchants": await self.yearly_top_merchants(account_id, user_id=user_id),
+            "monthly_totals": await self.yearly_monthly_totals(account_id, user_id=user_id, payment_source=payment_source),
+            "category_breakdown": await self.yearly_category_breakdown(account_id, user_id=user_id, payment_source=payment_source),
+            "top_merchants": await self.yearly_top_merchants(account_id, user_id=user_id, payment_source=payment_source),
             "subscription_summary": await self.yearly_subscription_summary(account_id),
             "account_comparison": await self.yearly_account_comparison(account_id, user_id=user_id),
-            "summary_stats": await self.yearly_summary_stats(account_id, user_id=user_id),
+            "summary_stats": await self.yearly_summary_stats(account_id, user_id=user_id, payment_source=payment_source),
             # Cash + income additions
             "cash_expense_totals": await self.yearly_cash_expense_totals(user_id=user_id),
             "cash_expense_categories": await self.yearly_cash_expense_categories(user_id=user_id),
@@ -1348,12 +1434,13 @@ class ReportEngine:
         month: int,
         account_id: Optional[int] = None,
         user_id: Optional[int] = None,
+        payment_source: str = "all",
     ) -> Dict[str, Any]:
         """Run all 6 reports and return as a single dict."""
         return {
-            "monthly_spending": await self.monthly_spending_breakdown(year, month, account_id, user_id=user_id),
-            "merchant_concentration": await self.merchant_concentration(year, month, account_id, user_id=user_id),
-            "subscription_waste": await self.subscription_waste(year, month, account_id, user_id=user_id),
+            "monthly_spending": await self.monthly_spending_breakdown(year, month, account_id, user_id=user_id, payment_source=payment_source),
+            "merchant_concentration": await self.merchant_concentration(year, month, account_id, user_id=user_id, payment_source=payment_source),
+            "subscription_waste": await self.subscription_waste(year, month, account_id, user_id=user_id, payment_source=payment_source),
             "lifestyle_creep": await self.lifestyle_creep(year, month, account_id, user_id=user_id),
             "health_score": await self.financial_health_score(year, month, account_id, user_id=user_id),
             "no_spend_tracker": await self.no_spend_day_tracker(year, month, account_id, user_id=user_id),

@@ -24,6 +24,11 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
+            <div id="sourceFilter" class="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+                <button data-source="all" class="px-3 py-1.5 bg-indigo-600 text-white">All</button>
+                <button data-source="card" class="px-3 py-1.5 bg-white text-gray-600 hover:bg-gray-50">Cards & Bank</button>
+                <button data-source="cash" class="px-3 py-1.5 bg-white text-gray-600 hover:bg-gray-50">Cash & Wallet</button>
+            </div>
             <select id="accountFilter" class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent">
                 <option value="">All Accounts</option>
             </select>
@@ -48,8 +53,8 @@
     <!-- Empty state -->
     <div id="emptyState" class="hidden text-center py-20 text-gray-400">
         <i class="fas fa-chart-bar text-4xl mb-3"></i>
-        <p class="text-sm font-medium text-gray-500">No transaction data for this period</p>
-        <p class="text-xs mt-1">Upload a statement to see reports</p>
+        <p class="text-sm font-medium text-gray-500">No spending or income recorded for this period</p>
+        <p class="text-xs mt-1">Add a daily expense, log income, or upload a statement to see reports</p>
     </div>
 
     <!-- Report cards grid -->
@@ -302,6 +307,7 @@
     let currentYear = today.getMonth() === 0 ? today.getFullYear() - 1 : today.getFullYear();
     let currentMonth = today.getMonth() === 0 ? 12 : today.getMonth(); // 1-based, previous month
     let currentAccountId = '';
+    let currentSource = 'all';
     const charts = {};
 
     const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -312,6 +318,7 @@
         setupNav();
         setupFilters();
         setupModal();
+        setupSourceFilter();
         await loadAccounts();
         await loadDashboard();
     }
@@ -364,6 +371,21 @@
         });
     }
 
+    // --- Source filter (All / Cards & Bank / Cash & Wallet) ---
+    function setupSourceFilter() {
+        document.querySelectorAll('#sourceFilter button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentSource = this.dataset.source;
+                document.querySelectorAll('#sourceFilter button').forEach(b => {
+                    b.className = b.dataset.source === currentSource
+                        ? 'px-3 py-1.5 bg-indigo-600 text-white'
+                        : 'px-3 py-1.5 bg-white text-gray-600 hover:bg-gray-50';
+                });
+                loadDashboard();
+            });
+        });
+    }
+
     function applyFilter(tag) {
         document.querySelectorAll('.report-card').forEach(card => {
             if (tag === 'all' || card.dataset.tags.includes(tag)) {
@@ -396,6 +418,7 @@
             try {
                 const params = new URLSearchParams({ year: currentYear, month: currentMonth });
                 if (currentAccountId) params.set('account_id', currentAccountId);
+                if (currentSource !== 'all') params.set('payment_source', currentSource);
                 const resp = await fetch(`/api/reports/${reportId}?${params}`);
                 const data = await resp.json();
                 renderExpandedReport(reportId, data);
@@ -586,6 +609,7 @@
 
         const params = new URLSearchParams({ year: currentYear, month: currentMonth });
         if (currentAccountId) params.set('account_id', currentAccountId);
+        if (currentSource !== 'all') params.set('payment_source', currentSource);
 
         try {
             const resp = await fetch(`/api/reports/dashboard?${params}`);

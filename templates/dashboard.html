@@ -16,6 +16,11 @@
             <p class="text-sm text-gray-500 mt-0.5">12-month spending overview</p>
         </div>
         <div class="flex items-center gap-2">
+            <div id="sourceFilter" class="flex rounded-lg border border-gray-200 overflow-hidden text-xs font-medium">
+                <button data-source="all" class="px-3 py-1.5 bg-indigo-600 text-white">All</button>
+                <button data-source="card" class="px-3 py-1.5 bg-white text-gray-600 hover:bg-gray-50">Cards & Bank</button>
+                <button data-source="cash" class="px-3 py-1.5 bg-white text-gray-600 hover:bg-gray-50">Cash & Wallet</button>
+            </div>
             <select id="accountFilter" class="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white shadow-sm focus:ring-2 focus:ring-indigo-400 focus:border-transparent">
                 <option value="">All Accounts</option>
             </select>
@@ -254,6 +259,7 @@
 <script>
 (function() {
     let currentAccountId = '';
+    let currentSource = 'all';
     const charts = {};
     const CHART_COLORS = ['#6366f1','#f59e0b','#10b981','#ef4444','#8b5cf6','#f97316','#06b6d4','#ec4899','#84cc16','#14b8a6','#e11d48','#7c3aed'];
 
@@ -262,6 +268,17 @@
         document.getElementById('accountFilter').addEventListener('change', function() {
             currentAccountId = this.value;
             loadDashboard();
+        });
+        document.querySelectorAll('#sourceFilter button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                currentSource = this.dataset.source;
+                document.querySelectorAll('#sourceFilter button').forEach(b => {
+                    b.className = b.dataset.source === currentSource
+                        ? 'px-3 py-1.5 bg-indigo-600 text-white'
+                        : 'px-3 py-1.5 bg-white text-gray-600 hover:bg-gray-50';
+                });
+                loadDashboard();
+            });
         });
     }
 
@@ -276,6 +293,7 @@
 
         const params = new URLSearchParams();
         if (currentAccountId) params.set('account_id', currentAccountId);
+        if (currentSource !== 'all') params.set('payment_source', currentSource);
 
         try {
             const resp = await fetch('/api/reports/yearly-dashboard?' + params);

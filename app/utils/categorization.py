@@ -7,7 +7,7 @@ from typing import Optional, Dict, List
 
 
 # Merchant category mapping
-# Maps merchant name patterns to standardized categories
+# Maps merchant name patterns to UNIFIED_CATEGORIES names.
 MERCHANT_CATEGORIES: Dict[str, List[str]] = {
     "Food & Dining": [
         "swiggy", "zomato", "uber eats", "ubereats", "food", "restaurant",
@@ -15,23 +15,21 @@ MERCHANT_CATEGORIES: Dict[str, List[str]] = {
         "domino", "kfc", "subway", "dunkin", "bakery", "bistro", "diner",
         "eatery", "grill", "kitchen", "bar", "pub", "dining"
     ],
-    "Groceries & Supermarkets": [
+    "Groceries": [
         "big bazaar", "bigbazaar", "reliance fresh", "dmart", "d-mart",
         "more", "spencers", "grocery", "supermarket", "super market",
         "walmart", "costco", "whole foods", "safeway", "trader joe"
     ],
-    "Fuel & Gas": [
+    "Transport": [
         "petrol", "diesel", "fuel", "gas", "bharat petroleum", "bpcl",
-        "indian oil", "ioc", "hp", "shell", "essar"
-    ],
-    "Transportation & Travel": [
+        "indian oil", "ioc", "hp", "shell", "essar",
         "uber", "ola", "rapido", "lyft", "taxi", "cab", "metro",
         "railway", "irctc", "airline", "flight", "indigo", "spicejet",
         "air india", "vistara", "goair", "makemytrip", "cleartrip",
-        "goibibo", "yatra", "booking", "agoda", "hotel", "oyo",
+        "goibibo", "yatra", "booking", "agoda", "oyo",
         "treebo", "fabhotel", "parking", "toll"
     ],
-    "Shopping & Retail": [
+    "Shopping": [
         "amazon", "flipkart", "myntra", "ajio", "nykaa", "shopping",
         "retail", "store", "mall", "shop", "market", "lifestyle",
         "westside", "pantaloons", "max fashion", "h&m", "zara",
@@ -43,13 +41,13 @@ MERCHANT_CATEGORIES: Dict[str, List[str]] = {
         "movie", "theatre", "spotify", "apple music", "youtube",
         "gaming", "play station", "xbox", "steam"
     ],
-    "Utilities & Bills": [
-        "electricity", "water", "gas", "telephone", "mobile", "internet",
+    "Utilities": [
+        "electricity", "water", "telephone", "mobile", "internet",
         "broadband", "wifi", "airtel", "jio", "vodafone", "vi", "bsnl",
         "bill payment", "recharge", "postpaid", "prepaid"
     ],
-    "Healthcare & Medical": [
-        "pharmacy", "medical", "hospital", "clinic", "doctor", "health",
+    "Health": [
+        "pharmacy", "medical", "hospital", "clinic", "doctor",
         "apollo", "fortis", "max healthcare", "medanta", "medicine",
         "diagnostic", "lab", "pathology", "dental", "wellness"
     ],
@@ -62,11 +60,11 @@ MERCHANT_CATEGORIES: Dict[str, List[str]] = {
         "insurance", "lic", "hdfc life", "icici prudential", "sbi life",
         "bajaj allianz", "max life", "policy", "premium"
     ],
-    "Subscriptions & Memberships": [
+    "Software & Tools": [
         "subscription", "membership", "monthly", "annual", "renewal",
         "gym", "fitness", "cult.fit", "gold's gym"
     ],
-    "Cash Withdrawal": [
+    "Fees & Charges": [
         "atm", "cash withdrawal", "cash advance", "withdrawal"
     ],
     "Financial Services": [
@@ -85,8 +83,11 @@ MERCHANT_CATEGORIES: Dict[str, List[str]] = {
         "salon", "spa", "beauty", "cosmetic", "grooming", "parlor",
         "barber", "hair", "nail"
     ],
-    "Charity & Donations": [
+    "Charity": [
         "donation", "charity", "ngo", "trust", "foundation"
+    ],
+    "Travel & Hotels": [
+        "hotel"
     ],
 }
 

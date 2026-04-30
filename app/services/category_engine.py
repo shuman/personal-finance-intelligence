@@ -13,6 +13,8 @@ Flow:
 """
 import json
 import logging
+
+from app.services.categories import UNIFIED_CATEGORIES
 import re
 import unicodedata
 import uuid
@@ -152,13 +154,7 @@ class CategoryEngine:
     """
 
     # Standard category list for Claude to choose from
-    CATEGORIES = [
-        "Groceries", "Food & Dining", "Transport", "Health",
-        "Utilities", "Shopping", "Software & Tools", "Freelancing",
-        "Entertainment", "Fees & Charges", "Financial Services",
-        "Travel & Hotels", "Education", "Insurance", "Charity",
-        "Government & Tax", "Other",
-    ]
+    CATEGORIES = UNIFIED_CATEGORIES
 
     def __init__(self, db: AsyncSession):
         self.db = db

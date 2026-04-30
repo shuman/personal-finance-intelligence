@@ -35,6 +35,7 @@ async def dashboard(
     year: Optional[int] = Query(None),
     month: Optional[int] = Query(None),
     account_id: Optional[int] = Query(None),
+    payment_source: Optional[str] = Query("all"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -44,8 +45,11 @@ async def dashboard(
     year = year or today.year
     month = month or today.month
 
+    if payment_source not in ("all", "card", "cash"):
+        payment_source = "all"
+
     engine = ReportEngine(db)
-    data = await engine.generate_all(year, month, account_id, user_id=current_user.id)
+    data = await engine.generate_all(year, month, account_id, user_id=current_user.id, payment_source=payment_source)
 
     # Attach list of accounts for the filter dropdown
     acct_result = await db.execute(
@@ -67,12 +71,16 @@ async def dashboard(
 @router.get("/yearly-dashboard")
 async def yearly_dashboard(
     account_id: Optional[int] = Query(None),
+    payment_source: Optional[str] = Query("all"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Return all yearly dashboard data (12-month aggregated)."""
+    if payment_source not in ("all", "card", "cash"):
+        payment_source = "all"
+
     engine = ReportEngine(db)
-    data = await engine.generate_yearly_dashboard(account_id, user_id=current_user.id)
+    data = await engine.generate_yearly_dashboard(account_id, user_id=current_user.id, payment_source=payment_source)
 
     # Attach list of accounts for the filter dropdown
     acct_result = await db.execute(
@@ -97,6 +105,7 @@ async def individual_report(
     year: Optional[int] = Query(None),
     month: Optional[int] = Query(None),
     account_id: Optional[int] = Query(None),
+    payment_source: Optional[str] = Query("all"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -105,6 +114,9 @@ async def individual_report(
     today = _date.today()
     year = year or today.year
     month = month or today.month
+
+    if payment_source not in ("all", "card", "cash"):
+        payment_source = "all"
 
     method_name = REPORT_METHODS.get(report_id)
     if not method_name:
@@ -115,4 +127,10 @@ async def individual_report(
 
     engine = ReportEngine(db)
     method = getattr(engine, method_name)
-    return await method(year, month, account_id, user_id=current_user.id)
+    kwargs = {"account_id": account_id, "user_id": current_user.id}
+    # Only pass payment_source to methods that accept it
+    import inspect
+    sig = inspect.signature(method)
+    if "payment_source" in sig.parameters:
+        kwargs["payment_source"] = payment_source
+    return await method(year, month, **kwargs)

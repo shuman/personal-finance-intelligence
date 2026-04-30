@@ -13,6 +13,8 @@ import json
 import logging
 import uuid
 from datetime import datetime, date, time
+
+from app.services.categories import UNIFIED_CATEGORIES
 from decimal import Decimal
 from typing import List, Optional, Dict, Any, Tuple
 
@@ -28,15 +30,8 @@ logger = logging.getLogger(__name__)
 class DailyExpenseService:
     """Service for managing daily expense transactions with batch AI processing."""
 
-    # Standard expense categories (same as statement transactions)
-    CATEGORIES = [
-        "Groceries", "Food & Dining", "Transport", "Health",
-        "Utilities", "Shopping", "Software & Tools", "Freelancing",
-        "Entertainment", "Fees & Charges", "Financial Services",
-        "Travel & Hotels", "Education", "Insurance", "Charity",
-        "Government & Tax", "Personal Care", "Home & Garden",
-        "Bills & EMI", "Other",
-    ]
+    # Standard expense categories — single source of truth
+    CATEGORIES = UNIFIED_CATEGORIES
 
     # Payment methods
     PAYMENT_METHODS = ["cash", "bkash", "nagad", "rocket", "card_estimate"]

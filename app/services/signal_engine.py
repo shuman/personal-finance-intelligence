@@ -394,9 +394,10 @@ class SignalEngine:
         self, period_from: date, period_to: date, year: int, month: int,
         user_id: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """Compute income signals from user-entered DailyIncome records."""
+        """Compute income signals from user-entered DailyIncome records (excludes drafts)."""
         query = select(DailyIncome).where(
             DailyIncome.transaction_date.between(period_from, period_to),
+            DailyIncome.ai_status == "processed",
         )
         if user_id is not None:
             query = query.where(DailyIncome.user_id == user_id)
@@ -477,6 +478,7 @@ class SignalEngine:
             pt = date(y, m, last_day)
             query = select(func.coalesce(func.sum(DailyIncome.amount), 0)).where(
                     DailyIncome.transaction_date.between(pf, pt),
+                    DailyIncome.ai_status == "processed",
                 )
             if user_id is not None:
                 query = query.where(DailyIncome.user_id == user_id)
