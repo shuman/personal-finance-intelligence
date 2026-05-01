@@ -1,0 +1,16 @@
+providers = ["python", "node"]
+
+[phases.setup]
+nixPkgs = ["python311", "nodejs_20", "gcc"]
+
+[phases.install]
+cmds = [
+    "python -m venv --copies /opt/venv",
+    ". /opt/venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt",
+    "npm install --no-audit --no-fund",
+]
+
+[phases.build]
+cmds = [
+    "npm run build:css",
+]

@@ -1,0 +1,14 @@
+{
+  "name": "personal-finance-intelligence",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build:css": "tailwindcss -i ./static/src/tailwind.css -o ./static/css/tailwind.css --minify",
+    "watch:css": "tailwindcss -i ./static/src/tailwind.css -o ./static/css/tailwind.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.13",
+    "@tailwindcss/forms": "^0.5.9",
+    "@tailwindcss/typography": "^0.5.15"
+  }
+}
