@@ -2145,6 +2145,52 @@
         }
     </script>
 
+    <!-- Scroll-based URL + analytics section tracking -->
+    <script>
+    (function () {
+        var sections = ['how-it-works', 'security', 'reports', 'advisor', 'expenses', 'liabilities', 'features'];
+        var headerH = 64; // sticky header height in px
+        var current = '';
+
+        var observer = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    var id = entry.target.id;
+                    if (id === current) return;
+                    current = id;
+                    // Update URL hash without adding a browser history entry
+                    history.replaceState(null, '', '#' + id);
+                    // Fire virtual page_view so GA4 tracks section engagement
+                    if (typeof gtag === 'function') {
+                        gtag('event', 'page_view', {
+                            page_location: location.href,
+                            page_title: document.title + ' — ' + id
+                        });
+                    }
+                }
+            });
+        }, {
+            rootMargin: '-' + headerH + 'px 0px -50% 0px',
+            threshold: 0
+        });
+
+        sections.forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el) observer.observe(el);
+        });
+
+        // Clear hash when back at top (hero section)
+        var heroObserver = new IntersectionObserver(function (entries) {
+            if (entries[0].isIntersecting) {
+                current = '';
+                history.replaceState(null, '', location.pathname);
+            }
+        }, { rootMargin: '0px', threshold: 0.2 });
+        var hero = document.querySelector('section.relative.overflow-hidden');
+        if (hero) heroObserver.observe(hero);
+    })();
+    </script>
+
     <!-- Cookie Consent Banner -->
     <div id="consentBanner" role="dialog" aria-label="Cookie consent"
          style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999">
