@@ -2,6 +2,20 @@
 <html lang="en">
 
 <head>
+    <!-- Consent Mode v2: must run before GTM/gtag so defaults are set first -->
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        (function(){
+            var c = localStorage.getItem('kipta_consent');
+            var s = (c === 'granted') ? 'granted' : 'denied';
+            gtag('consent', 'default', {
+                analytics_storage: s, ad_storage: s,
+                ad_user_data: s, ad_personalization: s,
+                wait_for_update: 500
+            });
+        })();
+    </script>
     <!-- Google Tag Manager -->
     <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
     new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -12,12 +26,7 @@
 
     <!-- Google tag (gtag.js) -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-53MZPJC56F"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-53MZPJC56F');
-    </script>
+    <script>gtag('js', new Date()); gtag('config', 'G-53MZPJC56F');</script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2134,6 +2143,49 @@
                 modal.classList.add('hidden');
             }, 300);
         }
+    </script>
+
+    <!-- Cookie Consent Banner -->
+    <div id="consentBanner" role="dialog" aria-label="Cookie consent"
+         style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999">
+        <div style="background:rgba(17,24,39,0.97);backdrop-filter:blur(8px);border-top:1px solid rgba(255,255,255,0.08);box-shadow:0 -4px 24px rgba(0,0,0,0.4)">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <p class="flex-1 text-sm leading-relaxed" style="color:#d1d5db">
+                    We use cookies and analytics to understand how Kipta is used and improve your experience.
+                    <a href="/privacy" style="color:#818cf8;text-decoration:underline;text-underline-offset:2px">Privacy Policy</a>.
+                </p>
+                <div class="flex items-center gap-3 shrink-0">
+                    <button id="consentDecline"
+                        style="padding:8px 16px;border-radius:8px;font-size:0.875rem;font-weight:500;color:#9ca3af;background:transparent;border:none;cursor:pointer"
+                        onmouseover="this.style.color='#fff';this.style.background='rgba(255,255,255,0.1)'"
+                        onmouseout="this.style.color='#9ca3af';this.style.background='transparent'">
+                        Decline
+                    </button>
+                    <button id="consentAccept"
+                        style="padding:8px 20px;border-radius:8px;font-size:0.875rem;font-weight:600;color:#fff;background:linear-gradient(to right,#6366f1,#9333ea);border:none;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,0.4)"
+                        onmouseover="this.style.background='linear-gradient(to right,#4f46e5,#7e22ce)'"
+                        onmouseout="this.style.background='linear-gradient(to right,#6366f1,#9333ea)'">
+                        Accept All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function(){
+        var banner = document.getElementById('consentBanner');
+        if (!localStorage.getItem('kipta_consent')) banner.style.display = 'block';
+        function respond(state){
+            gtag('consent','update',{
+                analytics_storage:state,ad_storage:state,
+                ad_user_data:state,ad_personalization:state
+            });
+            localStorage.setItem('kipta_consent', state);
+            banner.style.display = 'none';
+        }
+        document.getElementById('consentAccept').onclick = function(){ respond('granted'); };
+        document.getElementById('consentDecline').onclick = function(){ respond('denied'); };
+    })();
     </script>
 </body>
 
