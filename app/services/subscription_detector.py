@@ -190,7 +190,12 @@ class SubscriptionDetector:
         self,
         account_id: Optional[int] = None,
     ) -> Dict[str, Any]:
-        """Detect Software & Tools subscriptions across the last 12 months."""
+        """Detect Software & Tools subscriptions across the last 12 months.
+
+        Monthly cost is based on the most recent month the merchant appeared,
+        so upgrades/downgrades are reflected immediately. Merchants with no
+        transaction in the latest month are excluded (unsubscribed).
+        """
         today = date.today()
         start = today - timedelta(days=365)
 
@@ -210,17 +215,44 @@ class SubscriptionDetector:
             merchant = self._normalize_merchant(t)
             merchant_txns[merchant].append(t)
 
+        # Determine the most recent month across all transactions
+        all_dates = [t.transaction_date for t in all_txns if t.transaction_date]
+        if not all_dates:
+            return {
+                "subscriptions": [],
+                "total_annual": 0,
+                "total_monthly_avg": 0,
+                "by_subcategory": [],
+            }
+        latest_month = max(all_dates)
+        latest_year, latest_mon = latest_month.year, latest_month.month
+
         subs_list = []
-        total_annual = 0.0
+        total_monthly = 0.0
         subcategory_totals: Dict[str, float] = defaultdict(float)
 
         for merchant, txns in merchant_txns.items():
+            # Find transactions in the most recent month only
+            latest_txns = [
+                t for t in txns
+                if t.transaction_date
+                and t.transaction_date.year == latest_year
+                and t.transaction_date.month == latest_mon
+            ]
+
+            # Skip merchants with no activity in the latest month (unsubscribed)
+            if not latest_txns:
+                continue
+
             rep = txns[0]
             subcategory = rep.subcategory_ai or self._infer_subcategory(merchant)
-            amounts = [float(t.billing_amount or t.amount or 0) for t in txns]
-            total = sum(amounts)
 
-            # Frequency analysis
+            # Use last month's actual spending as the monthly cost
+            monthly_cost = sum(
+                float(t.billing_amount or t.amount or 0) for t in latest_txns
+            )
+
+            # Frequency analysis (from full history)
             months_seen = set()
             account_ids = set()
             for t in txns:
@@ -251,21 +283,23 @@ class SubscriptionDetector:
                 confidence += 0.10
             confidence = min(confidence, 1.0)
 
-            monthly_avg = round(total / 12, 2) if total else 0
-            total_annual += total
-            subcategory_totals[subcategory] += total
+            annual = round(monthly_cost * self._frequency_multiplier(frequency), 2)
+            total_monthly += monthly_cost
+            subcategory_totals[subcategory] += monthly_cost
 
             subs_list.append({
                 "merchant": merchant,
-                "monthly_avg": monthly_avg,
-                "annual": round(total, 2),
+                "monthly_avg": round(monthly_cost, 2),
+                "annual": annual,
                 "frequency": frequency,
                 "count": len(txns),
                 "confidence": round(confidence, 2),
                 "subcategory": subcategory,
             })
 
-        subs_list.sort(key=lambda s: s["annual"], reverse=True)
+        subs_list.sort(key=lambda s: s["monthly_avg"], reverse=True)
+
+        total_annual = round(total_monthly * 12, 2)
 
         # Build by_subcategory summary
         by_subcategory = []
@@ -273,13 +307,13 @@ class SubscriptionDetector:
             by_subcategory.append({
                 "name": subcat,
                 "color": SUBCATEGORY_COLORS.get(subcat, "#9ca3af"),
-                "total_annual": round(total, 2),
+                "total_annual": round(total * 12, 2),
             })
 
         return {
             "subscriptions": subs_list,
-            "total_annual": round(total_annual, 2),
-            "total_monthly_avg": round(total_annual / 12, 2) if total_annual else 0,
+            "total_annual": total_annual,
+            "total_monthly_avg": round(total_monthly, 2),
             "by_subcategory": by_subcategory,
         }
 

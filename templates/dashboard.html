@@ -457,7 +457,9 @@
     // --- Top Merchants ---
     function renderTopMerchants(data) {
         if (!data || !data.merchants || !data.merchants.length) return;
-        const merchants = data.merchants.slice(0, 10).reverse();
+        const merchants = data.merchants
+            .slice(0, 10)
+            .sort((a, b) => parseFloat(a.amount) - parseFloat(b.amount));
         charts['merchants'] = new Chart(document.getElementById('chartTopMerchants'), {
             type: 'bar',
             data: {
