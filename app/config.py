@@ -132,6 +132,11 @@ class Settings(BaseSettings):
     )
     google_oauth_redirect_uri: str = "http://localhost:8000/api/auth/google/callback"
 
+    # Facebook OAuth
+    facebook_app_id: Optional[str] = None
+    facebook_app_secret: Optional[str] = None
+    facebook_redirect_uri: str = "http://localhost:8000/api/auth/facebook/callback"
+
     # Signup / Registration
     allow_signup: bool = True  # Set ALLOW_SIGNUP=false to disable public registration
 

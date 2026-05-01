@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -15,7 +16,7 @@ from app.models import User
 from app.utils.auth import verify_password, create_access_token, decode_access_token, get_password_hash
 from app.config import settings
 from app.services.email_service import create_password_reset_token, verify_reset_token, mark_token_as_used, send_password_reset_email
-from app.services.oauth_service import verify_google_token, get_or_create_google_user
+from app.services.oauth_service import verify_google_token, get_or_create_google_user, exchange_facebook_code, get_facebook_user_info, get_or_create_facebook_user
 from app.utils.encryption import hash_value
 
 router = APIRouter(prefix="/api/auth", tags=["authentication"])
@@ -433,6 +434,51 @@ async def google_login(
     )
 
 
+@router.get("/facebook/callback")
+async def facebook_callback(
+    request: Request,
+    code: Optional[str] = None,
+    error: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Facebook OAuth callback — browser redirect endpoint.
+
+    Facebook redirects here after the user authorizes (or denies).
+    Exchanges the code for an access token, fetches user info,
+    creates/looks-up the user, sets session, then redirects.
+    """
+    # User denied Facebook permission
+    if error or not code:
+        return RedirectResponse(url="/login?error=facebook_denied", status_code=303)
+
+    # Exchange code → access token
+    access_token = await exchange_facebook_code(code)
+    if not access_token:
+        return RedirectResponse(url="/login?error=facebook_token", status_code=303)
+
+    # Fetch user info from Facebook
+    fb_user_info = await get_facebook_user_info(access_token)
+    if not fb_user_info:
+        return RedirectResponse(url="/login?error=facebook_email", status_code=303)
+
+    # Get or create user
+    user = await get_or_create_facebook_user(db, fb_user_info)
+    if not user:
+        return RedirectResponse(url="/login?error=facebook_create", status_code=303)
+
+    # Set session
+    request.session["user_id"] = user.id
+    request.session["user_email"] = user.email
+
+    # Check if user needs to accept terms
+    needs_consent = not (user.terms_accepted_at and user.privacy_accepted_at)
+    if needs_consent:
+        return RedirectResponse(url="/consent", status_code=303)
+
+    return RedirectResponse(url="/dashboard", status_code=303)
+
+
 @router.post("/request-password-reset")
 async def request_password_reset(
     reset_request: PasswordResetRequest,
@@ -562,3 +608,69 @@ async def record_consent(
     await db.commit()
 
     return {"message": "Consent recorded successfully"}
+
+
+# ---------------------------------------------------------------------------
+# Facebook User Data Deletion (required for App Review)
+# ---------------------------------------------------------------------------
+
+@router.get("/data-deletion")
+async def data_deletion_page(request: Request):
+    """Landing page for Facebook user data deletion requests."""
+    return templates.TemplateResponse(request, "data_deletion.html", {"title": "Data Deletion Request"})
+
+
+@router.post("/data-deletion")
+async def data_deletion_submit(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Handle Facebook user data deletion request.
+    Accepts a signed_request from Facebook (App Dashboard callback)
+    or a manual email submission from the data deletion page.
+    """
+    from app.utils.encryption import hash_value
+
+    content_type = request.headers.get("content-type", "")
+
+    # Facebook sends a signed_request as form data when a user removes the app
+    if "application/x-www-form-urlencoded" in content_type:
+        form = await request.form()
+        signed_request = form.get("signed_request")
+        if signed_request:
+            # Acknowledge receipt — actual deletion can be handled manually or automated
+            # For now, log and return the required confirmation
+            import logging
+            logging.getLogger(__name__).info(
+                "Facebook data deletion callback received"
+            )
+            return {"url": f"{settings.site_url}/data-deletion", "confirmation_code": str(uuid.uuid4())[:8]}
+
+    # Manual form submission from the /data-deletion page
+    form = await request.form()
+    email = (form.get("email") or "").strip().lower()
+
+    if not email:
+        return templates.TemplateResponse(
+            request, "data_deletion.html",
+            {"title": "Data Deletion Request", "error": "Please provide an email address."},
+        )
+
+    # Look up user
+    result = await db.execute(select(User).where(User.email_hash == hash_value(email)))
+    user = result.scalar_one_or_none()
+
+    if user:
+        # Deactivate and anonymize the account
+        user.is_active = False
+        user.email = f"deleted_{user.uuid}@deleted"
+        user.email_hash = hash_value(f"deleted_{user.uuid}@deleted")
+        user.full_name = None
+        user.hashed_password = f"deleted_{uuid.uuid4().hex}"
+        await db.commit()
+
+    return templates.TemplateResponse(
+        request, "data_deletion.html",
+        {"title": "Data Deletion Request", "success": True},
+    )

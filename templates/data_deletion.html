@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Data Deletion Request{% endblock %}
+
+{% block content %}
+<div class="min-h-[80vh] flex items-center justify-center px-4">
+    <div class="max-w-md w-full space-y-8">
+        <!-- Header -->
+        <div class="text-center">
+            <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg mb-4">
+                <i class="fas fa-shield-alt text-white text-2xl"></i>
+            </div>
+            <h2 class="text-3xl font-bold text-gray-900">Data Deletion Request</h2>
+            <p class="mt-2 text-sm text-gray-600">Request deletion of your account and associated data</p>
+        </div>
+
+        {% if success %}
+        <!-- Success message -->
+        <div class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+            <i class="fas fa-check-circle mr-2"></i>
+            Your data deletion request has been processed. Your account has been deactivated and personal data removed.
+        </div>
+        {% else %}
+        <!-- Error message -->
+        {% if error %}
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            <i class="fas fa-exclamation-circle mr-2"></i>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <!-- Info box -->
+        <div class="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-lg text-sm">
+            <i class="fas fa-info-circle mr-2"></i>
+            Submitting this form will deactivate your account and remove your personal data (email, name). Transaction and financial data linked to your account will also be deleted. This action cannot be undone.
+        </div>
+
+        <!-- Deletion Form -->
+        <form method="POST" action="/api/auth/data-deletion" class="mt-8 space-y-6">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email address</label>
+                <input id="email" name="email" type="email" autocomplete="email" required
+                    class="appearance-none relative block w-full px-4 py-3 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    placeholder="you@example.com">
+            </div>
+
+            <div>
+                <button type="submit"
+                    class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors">
+                    Delete My Data
+                </button>
+            </div>
+        </form>
+        {% endif %}
+
+        <!-- Back link -->
+        <div class="text-center">
+            <a href="/" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                Back to home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

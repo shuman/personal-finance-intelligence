@@ -228,6 +228,7 @@ templates = Jinja2Templates(directory="templates")
 templates.env.globals["app_name"] = settings.app_name
 templates.env.globals["app_version"] = settings.app_version
 templates.env.globals["google_oauth_client_id"] = settings.google_oauth_client_id or ""
+templates.env.globals["facebook_app_id"] = settings.facebook_app_id or ""
 templates.env.globals["site_url"] = settings.site_url
 
 # ---------------------------------------------------------------------------
@@ -296,6 +297,12 @@ async def privacy_page(request: Request):
 async def terms_page(request: Request):
     """Terms of Service page (public)"""
     return templates.TemplateResponse(request, "terms.html", {"title": "Terms of Service"})
+
+
+@app.get("/data-deletion", response_class=HTMLResponse)
+async def data_deletion_page(request: Request):
+    """Data deletion request page (public — required by Facebook App Review)"""
+    return templates.TemplateResponse(request, "data_deletion.html", {"title": "Data Deletion Request"})
 
 
 @app.get("/consent", response_class=HTMLResponse)

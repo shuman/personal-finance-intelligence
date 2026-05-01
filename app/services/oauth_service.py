@@ -7,6 +7,7 @@ import uuid
 from typing import Optional, Dict
 from datetime import datetime
 
+import httpx
 from google.auth.transport import requests
 from google.oauth2 import id_token
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -187,3 +188,131 @@ async def link_google_account(
         await db.rollback()
         logger.error(f"Failed to link Google account for user {user.email}: {e}")
         return False
+
+
+# ---------------------------------------------------------------------------
+# Facebook OAuth (Authorization Code flow)
+# ---------------------------------------------------------------------------
+
+async def exchange_facebook_code(code: str) -> Optional[str]:
+    """
+    Exchange a Facebook authorization code for an access token.
+
+    Returns the access token string, or None on failure.
+    """
+    if not settings.facebook_app_id or not settings.facebook_app_secret:
+        logger.error("Facebook App ID or Secret is not configured")
+        return None
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://graph.facebook.com/v21.0/oauth/access_token",
+                params={
+                    "client_id": settings.facebook_app_id,
+                    "redirect_uri": settings.facebook_redirect_uri,
+                    "client_secret": settings.facebook_app_secret,
+                    "code": code,
+                },
+            )
+            data = resp.json()
+
+        if "access_token" not in data:
+            logger.error(f"Facebook token exchange failed: {data}")
+            return None
+
+        return data["access_token"]
+
+    except Exception as e:
+        logger.error(f"Error exchanging Facebook code: {e}")
+        return None
+
+
+async def get_facebook_user_info(access_token: str) -> Optional[Dict[str, str]]:
+    """
+    Fetch the authenticated Facebook user's profile.
+
+    Returns dict with email, name, facebook_id or None.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                "https://graph.facebook.com/me",
+                params={
+                    "fields": "id,name,email",
+                    "access_token": access_token,
+                },
+            )
+            data = resp.json()
+
+        if "id" not in data:
+            logger.error(f"Facebook user info fetch failed: {data}")
+            return None
+
+        email = data.get("email")
+        if not email:
+            logger.warning("Facebook user did not grant email permission")
+            return None
+
+        return {
+            "email": email,
+            "name": data.get("name"),
+            "facebook_id": data["id"],
+        }
+
+    except Exception as e:
+        logger.error(f"Error fetching Facebook user info: {e}")
+        return None
+
+
+async def get_or_create_facebook_user(
+    db: AsyncSession,
+    facebook_user_info: Dict[str, str],
+) -> Optional[User]:
+    """
+    Get an existing user by email or create a new one from a Facebook account.
+
+    Same pattern as get_or_create_google_user.
+    """
+    email = facebook_user_info.get("email")
+    if not email:
+        logger.error("Facebook user info missing email")
+        return None
+
+    # Look up existing user by email hash
+    result = await db.execute(
+        select(User).where(User.email_hash == hash_value(email.lower()))
+    )
+    user = result.scalar_one_or_none()
+
+    if user:
+        user.last_login = datetime.utcnow()
+        await db.commit()
+        await db.refresh(user)
+        logger.info(f"Existing user logged in via Facebook: {email}")
+        return user
+
+    # Create new user
+    try:
+        new_user = User(
+            uuid=str(uuid.uuid4()),
+            email=email,
+            email_hash=hash_value(email.lower()),
+            full_name=facebook_user_info.get("name"),
+            hashed_password=f"facebook_oauth_{uuid.uuid4().hex}",
+            is_active=True,
+            is_admin=False,
+            last_login=datetime.utcnow(),
+        )
+
+        db.add(new_user)
+        await db.commit()
+        await db.refresh(new_user)
+
+        logger.info(f"Created new user from Facebook account: {email}")
+        return new_user
+
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"Failed to create user from Facebook account {email}: {e}")
+        return None
