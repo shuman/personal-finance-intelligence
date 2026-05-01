@@ -311,7 +311,7 @@ async def consent_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 # Landing page (public)
-@app.get("/", response_class=HTMLResponse)
+@app.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def home(request: Request, db: AsyncSession = Depends(get_db)):
     """Landing page - redirect to daily expenses if logged in"""
     user = await require_login(request, db)
