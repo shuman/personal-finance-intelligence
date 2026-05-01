@@ -502,7 +502,7 @@
                     <h3 class="text-white font-bold text-xl text-center md:text-left">Untraceable Identity</h3>
                     <p class="text-slate-400 text-base mt-3 leading-relaxed text-center md:text-left">Your personal details are locked behind advanced cryptographic hashes. To anyone looking at our systems, including our own administrators, you are completely anonymous.</p>
                 </div>
-                
+
                 <!-- Pillar 2 -->
                 <div class="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm group">
                     <div class="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:border-cyan-500/50 transition-colors mb-6 mx-auto md:mx-0">
@@ -511,7 +511,7 @@
                     <h3 class="text-white font-bold text-xl text-center md:text-left">Impenetrable Financials</h3>
                     <p class="text-slate-400 text-base mt-3 leading-relaxed text-center md:text-left">Every transaction, account balance, and statement is heavily encrypted before it rests in our database. Only you hold the key to decode your financial life.</p>
                 </div>
-                
+
                 <!-- Pillar 3 -->
                 <div class="p-8 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors backdrop-blur-sm group">
                     <div class="w-14 h-14 rounded-2xl bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:border-indigo-500/50 transition-colors mb-6 mx-auto md:mx-0">
@@ -1600,7 +1600,7 @@
                 <h2 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">Everything you need</h2>
                 <p class="mt-6 text-lg text-gray-500 max-w-2xl mx-auto">From logging a quick cash expense to deep AI-driven behavioral analysis, Kipta handles your entire financial lifecycle.</p>
             </div>
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
                 <!-- 1. Daily Expenses -->
                 <div class="group bg-white rounded-3xl p-8 border border-gray-100 shadow-sm hover:border-blue-200 hover:shadow-[0_8px_30px_rgb(59,130,246,0.12)] transition-all duration-300 fade-up hover:-translate-y-1">
@@ -1993,11 +1993,11 @@
     <div id="securityModal" class="fixed inset-0 z-[100] hidden overflow-y-auto">
         <!-- Backdrop -->
         <div class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm transition-opacity opacity-0" id="securityModalBackdrop" onclick="closeSecurityModal()"></div>
-        
+
         <!-- Modal Content -->
         <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0 py-12">
             <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-2xl w-full border border-gray-100 opacity-0 translate-y-4 duration-300" id="securityModalPanel">
-                
+
                 <div class="absolute top-0 right-0 pt-4 pr-4">
                     <button type="button" onclick="closeSecurityModal()" class="text-gray-400 hover:text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-full w-8 h-8 flex items-center justify-center transition-colors">
                         <i class="fas fa-times"></i>
@@ -2101,7 +2101,7 @@
             const modal = document.getElementById('securityModal');
             const backdrop = document.getElementById('securityModalBackdrop');
             const panel = document.getElementById('securityModalPanel');
-            
+
             modal.classList.remove('hidden');
             // Small delay to allow display block to apply before animating opacity/transform
             setTimeout(() => {
@@ -2115,11 +2115,11 @@
             const modal = document.getElementById('securityModal');
             const backdrop = document.getElementById('securityModalBackdrop');
             const panel = document.getElementById('securityModalPanel');
-            
+
             backdrop.classList.add('opacity-0');
             panel.classList.remove('opacity-100', 'translate-y-0');
             panel.classList.add('opacity-0', 'translate-y-4');
-            
+
             setTimeout(() => {
                 modal.classList.add('hidden');
             }, 300);
