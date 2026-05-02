@@ -2,9 +2,25 @@
 
 {% block content %}
 <div class="px-4 sm:px-0">
-    <div class="mb-6">
-        <h1 class="text-3xl font-bold text-gray-900">All Transactions</h1>
-        <p class="text-gray-600 mt-2">Unified view across statements, expenses, income, and liabilities</p>
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">All Transactions</h1>
+            <p class="text-gray-600 mt-2">Unified view across statements, expenses, income, and liabilities</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <div id="monthNav" class="flex items-center gap-2 bg-white border border-gray-200 rounded-lg p-1">
+                <button id="prevMonth" class="px-2 py-1 text-gray-500 hover:text-gray-900 rounded">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <span id="currentMonthYear" class="text-sm font-semibold w-24 text-center">...</span>
+                <button id="nextMonth" class="px-2 py-1 text-gray-500 hover:text-gray-900 rounded">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <button id="goCurrentMonth" class="px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:text-gray-900 transition-colors disabled:text-gray-400 disabled:cursor-not-allowed">
+                Current Month
+            </button>
+        </div>
     </div>
 
     <!-- Source Tabs -->
@@ -162,12 +178,80 @@
     let currentSortBy = 'event_date';
     let currentSortOrder = 'desc';
 
+    // Month navigator state
+    let navMonth = new Date();
+    let useCustomRange = false;
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
     const SOURCE_BADGES = {
         statement_txn: { label: 'Card', classes: 'bg-blue-100 text-blue-800' },
         daily_expense: { label: 'Cash/MFS', classes: 'bg-orange-100 text-orange-800' },
         daily_income:  { label: 'Income', classes: 'bg-green-100 text-green-800' },
         liability_paid: { label: 'Bill/EMI', classes: 'bg-purple-100 text-purple-800' },
     };
+
+    // ---- Month navigator ----
+
+    function setMonthDates() {
+        const y = navMonth.getFullYear();
+        const m = navMonth.getMonth();
+        const first = new Date(y, m, 1);
+        const last = new Date(y, m + 1, 0);
+        document.getElementById('dateFrom').value = first.toISOString().split('T')[0];
+        document.getElementById('dateTo').value = last.toISOString().split('T')[0];
+    }
+
+    function updateMonthNav() {
+        document.getElementById('currentMonthYear').textContent =
+            `${monthNames[navMonth.getMonth()]} ${navMonth.getFullYear()}`;
+        const now = new Date();
+        const isCurrent = navMonth.getFullYear() === now.getFullYear() && navMonth.getMonth() === now.getMonth();
+        document.getElementById('goCurrentMonth').disabled = isCurrent;
+    }
+
+    function activateMonthNav() {
+        useCustomRange = false;
+        document.getElementById('monthNav').classList.remove('opacity-40');
+        document.getElementById('goCurrentMonth').classList.remove('opacity-40');
+        // Clear search fields
+        document.getElementById('descriptionFilter').value = '';
+        document.getElementById('amountMin').value = '';
+        document.getElementById('amountMax').value = '';
+        document.getElementById('categoryFilter').value = '';
+        setMonthDates();
+        updateMonthNav();
+        currentPage = 1;
+        fetchMoneyEvents();
+    }
+
+    document.getElementById('prevMonth').addEventListener('click', () => {
+        navMonth.setMonth(navMonth.getMonth() - 1);
+        activateMonthNav();
+    });
+
+    document.getElementById('nextMonth').addEventListener('click', () => {
+        navMonth.setMonth(navMonth.getMonth() + 1);
+        activateMonthNav();
+    });
+
+    document.getElementById('goCurrentMonth').addEventListener('click', () => {
+        navMonth = new Date();
+        activateMonthNav();
+    });
+
+    // When user manually edits date inputs, switch to custom range mode
+    document.getElementById('dateFrom').addEventListener('change', () => {
+        useCustomRange = true;
+        document.getElementById('monthNav').classList.add('opacity-40');
+        document.getElementById('goCurrentMonth').classList.add('opacity-40');
+    });
+    document.getElementById('dateTo').addEventListener('change', () => {
+        useCustomRange = true;
+        document.getElementById('monthNav').classList.add('opacity-40');
+        document.getElementById('goCurrentMonth').classList.add('opacity-40');
+    });
+
+    // ---- Sorting ----
 
     function toggleSort(field) {
         if (currentSortBy === field) {
@@ -193,6 +277,8 @@
             }
         });
     }
+
+    // ---- Source / Direction tabs ----
 
     function setSource(source) {
         currentSource = source;
@@ -226,6 +312,8 @@
         });
         fetchMoneyEvents();
     }
+
+    // ---- Fetch & render ----
 
     async function fetchMoneyEvents() {
         const params = new URLSearchParams();
@@ -310,8 +398,7 @@
     }
 
     function formatDate(dateStr) {
-        const d = new Date(dateStr + 'T00:00:00');
-        return d.toLocaleDateString();
+        return dateStr;
     }
 
     function goToPage(page) {
@@ -320,7 +407,10 @@
     }
 
     function clearFilters() {
-        setDefaultDates();
+        navMonth = new Date();
+        useCustomRange = false;
+        document.getElementById('monthNav').classList.remove('opacity-40');
+        document.getElementById('goCurrentMonth').classList.remove('opacity-40');
         document.getElementById('descriptionFilter').value = '';
         document.getElementById('amountMin').value = '';
         document.getElementById('amountMax').value = '';
@@ -336,6 +426,8 @@
                 btn.className = 'dir-tab px-3 py-1.5 rounded-full text-xs font-medium bg-white text-gray-600 border hover:bg-gray-50';
             }
         });
+        setMonthDates();
+        updateMonthNav();
         currentPage = 1;
         fetchMoneyEvents();
     }
@@ -366,14 +458,6 @@
         window.location.href = `/api/money-events/export/csv?${params}`;
     }
 
-    function setDefaultDates() {
-        const today = new Date();
-        const monthAgo = new Date();
-        monthAgo.setDate(today.getDate() - 30);
-        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
-        document.getElementById('dateFrom').value = monthAgo.toISOString().split('T')[0];
-    }
-
     async function loadCategories() {
         try {
             const resp = await fetch('/api/daily-expenses/options/categories');
@@ -392,7 +476,8 @@
 
     // Initialize
     window.onload = async () => {
-        setDefaultDates();
+        setMonthDates();
+        updateMonthNav();
         await loadCategories();
         fetchMoneyEvents();
     };

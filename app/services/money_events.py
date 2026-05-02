@@ -273,11 +273,10 @@ class MoneyEventQuery:
         date_from: date,
         date_to: date,
     ) -> list[MoneyEvent]:
-        """Fetch DailyIncome rows (processed only) → MoneyEvent list."""
+        """Fetch DailyIncome rows → MoneyEvent list."""
         query = select(DailyIncome).where(
             DailyIncome.user_id == user_id,
             DailyIncome.transaction_date.between(date_from, date_to),
-            DailyIncome.ai_status == "processed",
         )
         result = await self.db.execute(query)
         rows = result.scalars().all()
