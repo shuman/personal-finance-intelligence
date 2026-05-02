@@ -505,6 +505,36 @@
         document.getElementById('consentDecline').onclick = function(){ respond('denied'); };
     })();
     </script>
+
+    <!-- Floating Guide Bubble -->
+    <div id="guide-bubble" style="position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <!-- Tooltip label -->
+      <div id="guide-bubble-tip" style="display:flex;align-items:center;gap:8px;background:#1e293b;color:#f8fafc;font-size:12px;font-weight:500;padding:7px 13px;border-radius:999px;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.18);animation:bubbleFadeIn 0.3s ease;">
+        <i class="fas fa-book-open" style="font-size:10px;opacity:0.75;"></i>
+        How to use Kipta?
+        <button onclick="dismissGuideBubble()" style="background:none;border:none;color:rgba(255,255,255,0.45);cursor:pointer;font-size:13px;line-height:1;padding:0 0 0 4px;" title="Dismiss">&times;</button>
+      </div>
+      <!-- Bubble button -->
+      <a href="/guide" style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 18px rgba(99,102,241,0.45);text-decoration:none;transition:transform 0.15s,box-shadow 0.15s;" onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 6px 24px rgba(99,102,241,0.55)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 4px 18px rgba(99,102,241,0.45)'" title="Open Guide">
+        <i class="fas fa-question" style="color:#fff;font-size:16px;"></i>
+      </a>
+    </div>
+
+    <style>
+      @keyframes bubbleFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    </style>
+    <script>
+      (function(){
+        if(localStorage.getItem('kipta_guide_bubble_dismissed')==='1'){
+          var el=document.getElementById('guide-bubble');
+          if(el) el.style.display='none';
+        }
+      })();
+      function dismissGuideBubble(){
+        document.getElementById('guide-bubble-tip').style.display='none';
+        localStorage.setItem('kipta_guide_bubble_dismissed','1');
+      }
+    </script>
 </body>
 
 </html>
