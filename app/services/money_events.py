@@ -146,7 +146,7 @@ class MoneyEventQuery:
         if payment_source in ("all", "cash"):
             coros.append(self._fetch_daily_expense_events(user_id, date_from, date_to))
             coros.append(self._fetch_daily_income_events(user_id, date_from, date_to))
-        if payment_source in ("all", "liability"):
+        if payment_source == "liability":
             coros.append(self._fetch_liability_paid_events(user_id, date_from, date_to))
 
         results = await asyncio.gather(*coros)

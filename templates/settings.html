@@ -1,0 +1,880 @@
+{% extends "base.html" %}
+
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="px-4 sm:px-0">
+
+    <!-- Page header -->
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Settings</h1>
+        <p class="text-sm text-gray-500 mt-1">Manage your accounts, cards, and category rules.</p>
+    </div>
+
+    <!-- Settings Layout: sidebar + content -->
+    <div class="flex flex-col lg:flex-row gap-6">
+
+        <!-- Settings Sidebar Nav -->
+        <nav class="lg:w-56 shrink-0">
+            <div class="bg-white border border-gray-200 rounded-xl p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible">
+                <button onclick="showSection('accounts')" data-section="accounts"
+                    class="settings-nav-btn active flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap w-full text-left transition-colors">
+                    <i class="fas fa-credit-card w-4 text-center text-xs"></i>
+                    <span>Cards & Accounts</span>
+                </button>
+                <button onclick="showSection('rules')" data-section="rules"
+                    class="settings-nav-btn flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 whitespace-nowrap w-full text-left transition-colors">
+                    <i class="fas fa-tags w-4 text-center text-xs"></i>
+                    <span>Category Rules</span>
+                </button>
+                <button onclick="showSection('danger')" data-section="danger"
+                    class="settings-nav-btn flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 whitespace-nowrap w-full text-left transition-colors">
+                    <i class="fas fa-exclamation-triangle w-4 text-center text-xs"></i>
+                    <span>Danger Zone</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Settings Content Area -->
+        <div class="flex-1 min-w-0">
+
+            <!-- Section: Cards & Accounts -->
+            <div id="section-accounts" class="settings-section">
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <!-- Section header -->
+                    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center">
+                                <i class="fas fa-credit-card text-indigo-500 text-sm"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-semibold text-gray-900">Cards & Accounts</h2>
+                                <p class="text-xs text-gray-400">Your registered cards and bank accounts</p>
+                            </div>
+                        </div>
+                        <button onclick="openModal()"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
+                            <i class="fas fa-plus text-[10px]"></i> Register Card
+                        </button>
+                    </div>
+                    <!-- Cards Grid -->
+                    <div class="p-5">
+                        <div id="accountsGrid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+                        <!-- Empty state -->
+                        <div id="emptyState" class="hidden text-center py-12">
+                            <div class="w-14 h-14 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-credit-card text-xl text-gray-300"></i>
+                            </div>
+                            <h3 class="text-sm font-semibold text-gray-700 mb-1">No cards registered yet</h3>
+                            <p class="text-xs text-gray-400 mb-4 max-w-xs mx-auto">Register your cards to enable multi-card tracking and AI analysis.</p>
+                            <button onclick="openModal()"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">
+                                <i class="fas fa-plus text-[10px]"></i> Register Your First Card
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Category Rules -->
+            <div id="section-rules" class="settings-section hidden">
+                <div class="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                    <!-- Section header -->
+                    <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                                <i class="fas fa-tags text-emerald-500 text-sm"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-semibold text-gray-900">Category Rules</h2>
+                                <p class="text-xs text-gray-400">
+                                    Auto-learned rules for merchant categorization
+                                    <span id="ruleCount" class="ml-1 text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium"></span>
+                                </p>
+                            </div>
+                        </div>
+                        <button onclick="seedRules()"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors">
+                            <i class="fas fa-sync-alt text-[10px]"></i> Seed Defaults
+                        </button>
+                    </div>
+                    <!-- Search bar -->
+                    <div class="px-5 py-3 bg-gray-50/50 border-b border-gray-100">
+                        <div class="relative">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
+                            <input type="text" id="ruleSearch" placeholder="Search rules by merchant, category, or source..."
+                                oninput="filterRules()"
+                                class="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-300">
+                        </div>
+                        <p class="text-xs text-gray-400 mt-2">Rules are learned automatically when you override a category. User overrides always take priority.</p>
+                    </div>
+                    <div class="overflow-x-auto" style="max-height: 480px; overflow-y: auto;">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-50/80 sticky top-0 z-10">
+                                <tr class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th class="px-5 py-2.5">Merchant Pattern</th>
+                                    <th class="px-3 py-2.5">Category</th>
+                                    <th class="px-3 py-2.5">Subcategory</th>
+                                    <th class="px-3 py-2.5">Source</th>
+                                    <th class="px-3 py-2.5 text-right">Confidence</th>
+                                    <th class="px-3 py-2.5 text-right">Hits</th>
+                                    <th class="px-3 py-2.5 w-16"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="rulesTableBody" class="divide-y divide-gray-50"></tbody>
+                        </table>
+                        <div id="noResults" class="hidden text-center py-8">
+                            <p class="text-sm text-gray-400">No matching rules found.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Section: Danger Zone -->
+            <div id="section-danger" class="settings-section hidden">
+                <div class="space-y-5">
+                    <!-- Reset Data -->
+                    <div class="bg-white border border-red-200 rounded-xl overflow-hidden">
+                        <div class="px-5 py-4 border-b border-red-100 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                                <i class="fas fa-trash-alt text-red-500 text-sm"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-semibold text-gray-900">Reset All Data</h2>
+                                <p class="text-xs text-gray-400">Delete all your financial data. Your account stays active.</p>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4">
+                            <p class="text-xs text-gray-500 mb-4">This will permanently delete all your statements, transactions, expenses, income, liabilities, accounts, and uploaded files. Your user account and login remain intact. <strong>This cannot be undone.</strong></p>
+                            <button onclick="showPasswordModal('reset')"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 shadow-sm transition-colors">
+                                <i class="fas fa-trash-alt text-[10px]"></i> Reset My Data
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Delete Account -->
+                    <div class="bg-white border border-red-300 rounded-xl overflow-hidden">
+                        <div class="px-5 py-4 border-b border-red-100 flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center">
+                                <i class="fas fa-user-slash text-red-600 text-sm"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-sm font-semibold text-gray-900">Delete Account</h2>
+                                <p class="text-xs text-gray-400">Permanently delete your account and all associated data.</p>
+                            </div>
+                        </div>
+                        <div class="px-5 py-4">
+                            <p class="text-xs text-gray-500 mb-4">This will permanently delete your user account, all your financial data, uploaded files, and login credentials. You will be immediately logged out. <strong>This cannot be undone.</strong></p>
+                            <button onclick="showPasswordModal('delete')"
+                                class="inline-flex items-center gap-1.5 px-4 py-2 bg-red-700 text-white text-xs font-medium rounded-lg hover:bg-red-800 shadow-sm transition-colors">
+                                <i class="fas fa-user-slash text-[10px]"></i> Delete My Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Add Account Modal -->
+<div id="addAccountModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto relative">
+            <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex items-center justify-between rounded-t-2xl z-10">
+                <h3 class="text-lg font-semibold text-gray-900">Register Card / Account</h3>
+                <button onclick="closeModal()"
+                    class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="addAccountForm" class="px-6 py-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Institution</label>
+                    <select id="institutionId"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                        <option value="">-- Select Bank --</option>
+                    </select>
+                    <div id="customInstitutionSection" class="hidden mt-2">
+                        <input type="text" id="customInstitutionName" placeholder="Type institution name..."
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Account Type</label>
+                        <select name="account_type" id="accountType"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            <option value="credit_card">Credit Card</option>
+                            <option value="debit_card">Debit Card</option>
+                            <option value="savings">Savings Account</option>
+                            <option value="current">Current Account</option>
+                            <option value="mfs">MFS (bKash/Nagad)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Card Network</label>
+                        <select name="card_network"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            <option value="AMEX">American Express</option>
+                            <option value="VISA">Visa</option>
+                            <option value="MASTERCARD">Mastercard</option>
+                            <option value="">N/A (Bank Account)</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Card Number</label>
+                    <input type="text" id="cardNumberInput" required placeholder="123456******1234 or paste full number to auto-mask"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono">
+                    <p class="text-xs text-gray-400 mt-1">Enter masked number (e.g. 123456******1234) or paste full number — it will be auto-masked. Full card numbers are never sent to the server.</p>
+                </div>
+                <div class="grid grid-cols-5 gap-3">
+                    <div class="col-span-3">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Cardholder Name</label>
+                        <input type="text" name="cardholder_name" placeholder="John Doe"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Card Tier</label>
+                        <select name="card_tier" id="cardTier"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            <option value="primary">Primary</option>
+                            <option value="supplement">Supplement</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="parentCardSection" class="hidden">
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Primary Card</label>
+                    <select name="parent_account_id" id="parentAccountId"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                        <option value="">-- Select Primary Card --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Nickname <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <input type="text" name="account_nickname" placeholder="My Amex Gold"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Credit Limit (BDT)</label>
+                        <input type="number" name="credit_limit" placeholder="400000"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Reward Program</label>
+                        <input type="text" name="reward_program_name" placeholder="MR Points"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Reward Type</label>
+                        <select name="reward_type"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            <option value="points">Points</option>
+                            <option value="cashback">Cashback</option>
+                            <option value="miles">Miles</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Points Expiry (months)</label>
+                        <input type="number" name="reward_expiry_months" placeholder="36"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Card Color</label>
+                    <div class="flex items-center gap-3">
+                        <input type="color" name="color_hex" value="#1a73e8"
+                            class="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer p-0.5">
+                        <span class="text-xs text-gray-400">Choose a color for the card accent</span>
+                    </div>
+                </div>
+            </form>
+            <div class="sticky bottom-0 bg-white px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 rounded-b-2xl">
+                <button onclick="closeModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onclick="submitAccount()"
+                    class="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">Register Card</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Rule Modal -->
+<div id="editRuleModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closeEditModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md relative">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-900">Edit Category Rule</h3>
+                <button onclick="closeEditModal()"
+                    class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="editRuleForm" class="px-6 py-5 space-y-4">
+                <div id="editRuleError" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
+                <input type="hidden" id="editRuleId">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Merchant Pattern</label>
+                    <input type="text" id="editMerchantPattern" required
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
+                    <select id="editCategory"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Subcategory <span class="text-gray-400 font-normal">(optional)</span></label>
+                    <input type="text" id="editSubcategory"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Source</label>
+                        <select id="editSource"
+                            class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white">
+                            <option value="builtin">Built-in</option>
+                            <option value="user_override">User Override</option>
+                            <option value="claude_ai">Claude AI</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 mb-1">Confidence</label>
+                        <div class="flex items-center gap-2">
+                            <input type="range" id="editConfidence" min="0" max="100" step="5"
+                                class="flex-1 accent-indigo-600"
+                                oninput="document.getElementById('confLabel').textContent=this.value+'%'">
+                            <span id="confLabel" class="text-xs text-gray-500 w-8 text-right">80%</span>
+                        </div>
+                    </div>
+                </div>
+            </form>
+            <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                <button onclick="closeEditModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+                <button onclick="submitEditRule()"
+                    class="px-5 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-sm transition-colors">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Password Confirmation Modal -->
+<div id="passwordModal" class="fixed inset-0 z-50 hidden">
+    <div class="fixed inset-0 bg-black/40 backdrop-blur-sm" onclick="closePasswordModal()"></div>
+    <div class="fixed inset-0 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md relative">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h3 id="passwordModalTitle" class="text-lg font-semibold text-gray-900">Confirm Password</h3>
+                <button onclick="closePasswordModal()"
+                    class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-6 py-5 space-y-4">
+                <div id="passwordModalError" class="hidden p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700"></div>
+                <p id="passwordModalDesc" class="text-sm text-gray-600"></p>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1">Enter your password to continue</label>
+                    <input type="password" id="passwordModalInput" placeholder="Your password"
+                        class="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                        onkeydown="if(event.key==='Enter') executeDangerAction()">
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3">
+                <button onclick="closePasswordModal()"
+                    class="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
+                <button id="passwordModalConfirmBtn" onclick="executeDangerAction()"
+                    class="px-5 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 shadow-sm transition-colors">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const CATEGORIES = [
+        "Groceries", "Food & Dining", "Transport", "Health",
+        "Utilities", "Shopping", "Software & Tools", "Freelancing",
+        "Entertainment", "Fees & Charges", "Financial Services",
+        "Travel & Hotels", "Education", "Insurance", "Charity",
+        "Government & Tax", "Personal Care", "Home & Garden",
+        "Bills & EMI", "Other"
+    ];
+
+    let allRules = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadInstitutions();
+        loadAccounts();
+        loadRules();
+        populateEditCategoryDropdown();
+    });
+
+    document.getElementById('cardTier').addEventListener('change', function () {
+        document.getElementById('parentCardSection').classList.toggle('hidden', this.value !== 'supplement');
+    });
+
+    // --- Settings section navigation ---
+    function showSection(name) {
+        document.querySelectorAll('.settings-section').forEach(s => s.classList.add('hidden'));
+        document.getElementById('section-' + name).classList.remove('hidden');
+        document.querySelectorAll('.settings-nav-btn').forEach(btn => {
+            if (btn.dataset.section === name) {
+                btn.classList.add('active');
+                btn.classList.add('bg-indigo-50', 'text-indigo-700');
+                btn.classList.remove('text-gray-600', 'hover:bg-gray-50');
+            } else {
+                btn.classList.remove('active', 'bg-indigo-50', 'text-indigo-700');
+                btn.classList.add('text-gray-600', 'hover:bg-gray-50');
+            }
+        });
+    }
+    // Initialize first section as active
+    showSection('accounts');
+
+    // --- Password Modal / Danger Zone ---
+    let pendingDangerAction = null;
+
+    function showPasswordModal(action) {
+        pendingDangerAction = action;
+        const modal = document.getElementById('passwordModal');
+        const title = document.getElementById('passwordModalTitle');
+        const desc = document.getElementById('passwordModalDesc');
+        const btn = document.getElementById('passwordModalConfirmBtn');
+        const errorEl = document.getElementById('passwordModalError');
+        const input = document.getElementById('passwordModalInput');
+
+        errorEl.classList.add('hidden');
+        input.value = '';
+
+        if (action === 'reset') {
+            title.textContent = 'Reset All Data';
+            desc.textContent = 'This will permanently delete all your financial data (statements, transactions, expenses, liabilities, accounts). Your account will remain.';
+            btn.textContent = 'Reset My Data';
+        } else {
+            title.textContent = 'Delete Account';
+            desc.textContent = 'This will permanently delete your account and all associated data. You will be logged out immediately.';
+            btn.textContent = 'Delete My Account';
+        }
+
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+        setTimeout(() => input.focus(), 100);
+    }
+
+    function closePasswordModal() {
+        document.getElementById('passwordModal').classList.add('hidden');
+        document.body.style.overflow = '';
+        pendingDangerAction = null;
+    }
+
+    async function executeDangerAction() {
+        const password = document.getElementById('passwordModalInput').value;
+        if (!password) return;
+
+        const errorEl = document.getElementById('passwordModalError');
+        const btn = document.getElementById('passwordModalConfirmBtn');
+        btn.disabled = true;
+        btn.textContent = 'Verifying...';
+        errorEl.classList.add('hidden');
+
+        try {
+            // Step 1: Verify password
+            const verifyRes = await fetch('/api/auth/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password }),
+            });
+
+            if (!verifyRes.ok) {
+                errorEl.textContent = 'Incorrect password. Please try again.';
+                errorEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = pendingDangerAction === 'reset' ? 'Reset My Data' : 'Delete My Account';
+                return;
+            }
+
+            // Step 2: Execute action
+            btn.textContent = pendingDangerAction === 'reset' ? 'Resetting...' : 'Deleting...';
+
+            const endpoint = pendingDangerAction === 'reset' ? '/api/auth/reset-my-data' : '/api/auth/delete-my-account';
+            const res = await fetch(endpoint, { method: 'POST' });
+            const result = await res.json();
+
+            if (!res.ok) {
+                errorEl.textContent = result.detail || 'An error occurred. Please try again.';
+                errorEl.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = pendingDangerAction === 'reset' ? 'Reset My Data' : 'Delete My Account';
+                return;
+            }
+
+            closePasswordModal();
+
+            if (pendingDangerAction === 'delete') {
+                // User is deleted, redirect to login
+                window.location.href = '/login';
+                return;
+            }
+
+            // For reset: reload current page to reflect cleared data
+            alert(result.message || 'All data has been reset.');
+            window.location.reload();
+
+        } catch (e) {
+            errorEl.textContent = 'Network error. Please try again.';
+            errorEl.classList.remove('hidden');
+            btn.disabled = false;
+            btn.textContent = pendingDangerAction === 'reset' ? 'Reset My Data' : 'Delete My Account';
+        }
+    }
+
+    // --- Account Modal ---
+    function openModal() {
+        document.getElementById('addAccountModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+        document.getElementById('addAccountModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    // --- Edit Rule Modal ---
+    function openEditModal(ruleId) {
+        const rule = allRules.find(r => r.id === ruleId);
+        if (!rule) return;
+        document.getElementById('editRuleError').classList.add('hidden');
+        document.getElementById('editRuleError').textContent = '';
+        document.getElementById('editRuleId').value = rule.id;
+        document.getElementById('editMerchantPattern').value = rule.merchant_pattern;
+        document.getElementById('editCategory').value = rule.category;
+        document.getElementById('editSubcategory').value = rule.subcategory || '';
+        document.getElementById('editSource').value = rule.source;
+        const conf = Math.round(rule.confidence * 100);
+        document.getElementById('editConfidence').value = conf;
+        document.getElementById('confLabel').textContent = conf + '%';
+        document.getElementById('editRuleModal').classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeEditModal() {
+        document.getElementById('editRuleModal').classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    function populateEditCategoryDropdown() {
+        const sel = document.getElementById('editCategory');
+        sel.innerHTML = CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('');
+    }
+
+    // --- Fuzzy search ---
+    function fuzzyMatch(query, text) {
+        if (!query) return true;
+        const q = query.toLowerCase().replace(/\s+/g, '');
+        const t = text.toLowerCase().replace(/\s+/g, '');
+        if (t.includes(q)) return true;
+        let qi = 0;
+        for (let ti = 0; ti < t.length && qi < q.length; ti++) {
+            if (t[ti] === q[qi]) qi++;
+        }
+        return qi === q.length;
+    }
+
+    function filterRules() {
+        const query = document.getElementById('ruleSearch').value.trim();
+        const filtered = allRules.filter(r =>
+            fuzzyMatch(query, r.merchant_pattern) ||
+            fuzzyMatch(query, r.category) ||
+            fuzzyMatch(query, r.subcategory || '') ||
+            fuzzyMatch(query, r.source)
+        );
+        renderRules(filtered);
+    }
+
+    // --- Data loading ---
+    const DEFAULT_INSTITUTIONS = [
+        "City Bank - American Express",
+        "BRAC Bank",
+        "Dutch-Bangla Bank",
+        "Eastern Bank",
+        "Standard Chartered Bangladesh",
+        "bKash",
+        "Nagad",
+        "Rocket (Dutch-Bangla)",
+    ];
+
+    async function loadInstitutions() {
+        let institutions = [];
+        try {
+            const res = await fetch('/api/institutions');
+            institutions = await res.json();
+        } catch(e) { /* fallback below */ }
+
+        const sel = document.getElementById('institutionId');
+        // Clear existing options except the first placeholder
+        sel.innerHTML = '<option value="">-- Select Bank --</option>';
+
+        if (institutions.length > 0) {
+            institutions.forEach(inst => {
+                sel.innerHTML += `<option value="${inst.id}">${inst.name}</option>`;
+            });
+        } else {
+            // Fallback: hardcoded list (no IDs — will be sent as null)
+            DEFAULT_INSTITUTIONS.forEach(name => {
+                sel.innerHTML += `<option value="${name}">${name}</option>`;
+            });
+        }
+        sel.innerHTML += '<option value="__custom__">Other (type manually)...</option>';
+
+        sel.addEventListener('change', function() {
+            const custom = document.getElementById('customInstitutionSection');
+            if (this.value === '__custom__') {
+                custom.classList.remove('hidden');
+                document.getElementById('customInstitutionName').focus();
+            } else {
+                custom.classList.add('hidden');
+            }
+        });
+    }
+
+    // --- Card number auto-masking ---
+    document.getElementById('cardNumberInput').addEventListener('blur', function() {
+        const raw = this.value.replace(/[\s\-]/g, '');
+        // If it looks like a full card number (all digits, >= 10 chars, no asterisks)
+        if (/^\d{10,19}$/.test(raw)) {
+            const first6 = raw.substring(0, 6);
+            const last4 = raw.substring(raw.length - 4);
+            const masked = first6 + '******' + last4;
+            this.value = masked;
+        }
+    });
+
+    const NETWORK_ICONS = {
+        AMEX: 'fab fa-cc-amex',
+        VISA: 'fab fa-cc-visa',
+        MASTERCARD: 'fab fa-cc-mastercard',
+    };
+
+    async function loadAccounts() {
+        const res = await fetch('/api/accounts');
+        const accounts = await res.json();
+        const grid = document.getElementById('accountsGrid');
+        const empty = document.getElementById('emptyState');
+        const parentSel = document.getElementById('parentAccountId');
+
+        if (!accounts.length) {
+            grid.innerHTML = '';
+            empty.classList.remove('hidden');
+            return;
+        }
+        empty.classList.add('hidden');
+
+        parentSel.innerHTML = '<option value="">-- Select Primary Card --</option>';
+        accounts.filter(a => a.card_tier === 'primary').forEach(a => {
+            parentSel.innerHTML += `<option value="${a.id}">${a.account_number_masked} — ${a.cardholder_name || ''}</option>`;
+        });
+
+        grid.innerHTML = accounts.map(a => {
+            const color = a.color_hex || '#6366f1';
+            const icon = NETWORK_ICONS[a.card_network] || 'fas fa-credit-card';
+            const tierBadge = a.card_tier === 'supplement'
+                ? `<span class="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-medium">Supplement</span>`
+                : `<span class="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-600 font-medium">Primary</span>`;
+            return `
+        <div class="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+            <div class="h-1.5" style="background: linear-gradient(90deg, ${color}, ${color}88)"></div>
+            <div class="p-5">
+                <div class="flex items-start justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style="background: ${color}18; color: ${color}">
+                            <i class="${icon}"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">${a.account_nickname || a.account_number_masked}</h3>
+                            <p class="text-xs text-gray-400">${a.cardholder_name || 'Unknown'}</p>
+                        </div>
+                    </div>
+                    ${tierBadge}
+                </div>
+                <div class="flex items-center gap-2 mb-3">
+                    <code class="text-xs px-2 py-1 rounded-md bg-gray-50 text-gray-600 font-mono">${a.account_number_masked}</code>
+                    ${a.card_network ? `<span class="text-xs text-gray-400">${a.card_network}</span>` : ''}
+                </div>
+                <div class="space-y-1.5">
+                    ${a.credit_limit ? `
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-gray-400">Credit Limit</span>
+                        <span class="font-semibold text-gray-700">${parseFloat(a.credit_limit).toLocaleString()} <span class="text-gray-400 font-normal">${a.billing_currency || 'BDT'}</span></span>
+                    </div>` : ''}
+                    ${a.reward_program_name ? `
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-gray-400">Rewards</span>
+                        <span class="text-emerald-600 font-medium">${a.reward_program_name}${a.reward_type ? ' (' + a.reward_type + ')' : ''}</span>
+                    </div>` : ''}
+                </div>
+            </div>
+        </div>`;
+        }).join('');
+    }
+
+    async function loadRules() {
+        const res = await fetch('/api/categories/rules?limit=200');
+        allRules = await res.json();
+        document.getElementById('ruleCount').textContent = `${allRules.length} rules`;
+        document.getElementById('ruleSearch').value = '';
+        renderRules(allRules);
+    }
+
+    const SOURCE_STYLES = {
+        'user_override': 'bg-emerald-50 text-emerald-700',
+        'claude_ai': 'bg-purple-50 text-purple-700',
+        'builtin': 'bg-blue-50 text-blue-700',
+    };
+
+    function renderRules(rules) {
+        const tbody = document.getElementById('rulesTableBody');
+        const noResults = document.getElementById('noResults');
+
+        if (!rules.length) {
+            tbody.innerHTML = '';
+            noResults.classList.remove('hidden');
+            return;
+        }
+        noResults.classList.add('hidden');
+
+        tbody.innerHTML = rules.map(r => `
+        <tr class="hover:bg-gray-50/50 group">
+            <td class="px-5 py-2.5 font-mono text-xs text-gray-700">${esc(r.merchant_pattern)}</td>
+            <td class="px-3 py-2.5 text-xs font-medium text-gray-700">${esc(r.category)}</td>
+            <td class="px-3 py-2.5 text-xs text-gray-400">${esc(r.subcategory) || '\u2014'}</td>
+            <td class="px-3 py-2.5"><span class="text-xs px-2 py-0.5 rounded-full font-medium ${SOURCE_STYLES[r.source] || 'bg-gray-100 text-gray-600'}">${r.source}</span></td>
+            <td class="px-3 py-2.5 text-xs text-right text-gray-500">${(r.confidence * 100).toFixed(0)}%</td>
+            <td class="px-3 py-2.5 text-xs text-right text-gray-500">${r.match_count}</td>
+            <td class="px-3 py-2.5">
+                <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onclick="openEditModal(${r.id})"
+                            class="p-1.5 rounded-lg text-gray-300 hover:text-indigo-500 hover:bg-indigo-50 transition-colors"
+                            title="Edit rule">
+                        <i class="fas fa-pen text-xs"></i>
+                    </button>
+                    <button onclick="deleteRule(${r.id})"
+                            class="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="Delete rule">
+                        <i class="fas fa-trash-alt text-xs"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+    }
+
+    function esc(s) { return s ? s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }
+
+    async function submitAccount() {
+        const form = document.getElementById('addAccountForm');
+        const data = {};
+        new FormData(form).forEach((v, k) => { if (v) data[k] = v; });
+
+        // Card number: take from the dedicated input, strip any remaining full digits
+        const cardInput = document.getElementById('cardNumberInput');
+        const maskedValue = cardInput.value.trim();
+        if (!maskedValue) { alert('Card number is required'); return; }
+        // Safety: if somehow still a full number, mask it before sending
+        const cleanMasked = maskedValue.replace(/[\s\-]/g, '');
+        if (/^\d{10,19}$/.test(cleanMasked)) {
+            alert('Full card number detected. Please use the masked format (e.g. 123456******1234).');
+            return;
+        }
+        data.account_number_masked = maskedValue;
+        // Never send full card number
+        delete data.account_number_full;
+
+        // Institution handling
+        const instSelect = document.getElementById('institutionId');
+        const instValue = instSelect.value;
+        if (instValue === '__custom__') {
+            const customName = document.getElementById('customInstitutionName').value.trim();
+            if (!customName) { alert('Please enter the institution name'); return; }
+            data.institution_id = null;
+            if (!data.account_nickname) data.account_nickname = customName;
+        } else if (instValue && !isNaN(instValue)) {
+            // API-returned institution with numeric ID
+            data.institution_id = parseInt(instValue);
+        } else {
+            // Hardcoded fallback name (no ID) or empty
+            data.institution_id = null;
+        }
+
+        if (data.credit_limit) data.credit_limit = parseFloat(data.credit_limit);
+        if (data.reward_expiry_months) data.reward_expiry_months = parseInt(data.reward_expiry_months);
+        if (data.parent_account_id) data.parent_account_id = parseInt(data.parent_account_id);
+
+        const res = await fetch('/api/accounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data),
+        });
+        if (res.ok) {
+            closeModal();
+            form.reset();
+            cardInput.value = '';
+            document.getElementById('customInstitutionSection').classList.add('hidden');
+            loadAccounts();
+        } else {
+            const err = await res.json();
+            alert('Error: ' + (err.detail || JSON.stringify(err)));
+        }
+    }
+
+    async function submitEditRule() {
+        const errEl = document.getElementById('editRuleError');
+        errEl.classList.add('hidden');
+        errEl.textContent = '';
+
+        const ruleId = document.getElementById('editRuleId').value;
+        const body = {
+            merchant_pattern: document.getElementById('editMerchantPattern').value,
+            category: document.getElementById('editCategory').value,
+            subcategory: document.getElementById('editSubcategory').value || null,
+            source: document.getElementById('editSource').value,
+            confidence: parseInt(document.getElementById('editConfidence').value) / 100,
+        };
+
+        const res = await fetch(`/api/categories/rules/${ruleId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+
+        if (res.ok) {
+            closeEditModal();
+            await loadRules();
+        } else {
+            const err = await res.json();
+            errEl.textContent = err.detail || 'Failed to update rule. Please try again.';
+            errEl.classList.remove('hidden');
+        }
+    }
+
+    async function seedRules() {
+        const res = await fetch('/api/categories/rules/seed', { method: 'POST' });
+        const data = await res.json();
+        alert(data.message);
+        loadRules();
+    }
+
+    async function deleteRule(id) {
+        if (!confirm('Deactivate this rule?')) return;
+        await fetch(`/api/categories/rules/${id}`, { method: 'DELETE' });
+        loadRules();
+    }
+</script>
+{% endblock %}

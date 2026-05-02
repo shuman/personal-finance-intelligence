@@ -299,6 +299,12 @@ async def terms_page(request: Request):
     return templates.TemplateResponse(request, "terms.html", {"title": "Terms of Service"})
 
 
+@app.get("/guide", response_class=HTMLResponse)
+async def guide_page(request: Request):
+    """Guide page (public)"""
+    return templates.TemplateResponse(request, "guide.html", {"title": "Application Guide"})
+
+
 @app.get("/data-deletion", response_class=HTMLResponse)
 async def data_deletion_page(request: Request):
     """Data deletion request page (public — required by Facebook App Review)"""
@@ -394,13 +400,19 @@ async def all_transactions_page(request: Request, db: AsyncSession = Depends(get
     return templates.TemplateResponse(request, "all_transactions.html", {"title": "All Transactions", "user": user})
 
 
-@app.get("/accounts", response_class=HTMLResponse)
-async def accounts_page(request: Request, db: AsyncSession = Depends(get_db)):
-    """Accounts page (requires login)"""
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, db: AsyncSession = Depends(get_db)):
+    """Settings page (requires login)"""
     user = await require_login(request, db)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse(request, "accounts.html", {"title": "My Cards & Accounts", "user": user})
+    return templates.TemplateResponse(request, "settings.html", {"title": "Settings", "user": user})
+
+
+@app.get("/accounts", response_class=HTMLResponse)
+async def accounts_redirect(request: Request, db: AsyncSession = Depends(get_db)):
+    """Redirect legacy /accounts to /settings"""
+    return RedirectResponse(url="/settings", status_code=301)
 
 
 @app.get("/advisor", response_class=HTMLResponse)

@@ -11,10 +11,7 @@
             <p class="text-gray-600 mt-1">View and manage your uploaded credit card statements</p>
         </div>
         <div class="flex gap-3">
-            <button onclick="confirmResetDatabase()" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700">
-                <i class="fas fa-trash-alt mr-2"></i>Reset Database
-            </button>
-            <a href="/" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
+            <a href="/upload" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">
                 <i class="fas fa-plus mr-2"></i>Upload New
             </a>
         </div>
@@ -180,48 +177,6 @@
         } catch (error) {
             console.error('Error deleting statement:', error);
             alert('Error deleting statement: ' + error.message);
-        }
-    }
-
-    async function confirmResetDatabase() {
-        const confirm1 = confirm(
-            '⚠️ WARNING: RESET ENTIRE DATABASE ⚠️\n\n' +
-            'This will permanently DELETE:\n' +
-            '- ALL statements\n' +
-            '- ALL transactions\n' +
-            '- ALL uploaded files\n' +
-            '- ALL analytics data\n\n' +
-            'This action CANNOT be undone!\n\n' +
-            'Are you absolutely sure?'
-        );
-
-        if (!confirm1) return;
-
-        const confirm2 = prompt(
-            'Type "RESET" (all caps) to confirm database reset:'
-        );
-
-        if (confirm2 !== 'RESET') {
-            alert('Reset cancelled. You must type "RESET" exactly.');
-            return;
-        }
-
-        try {
-            const response = await fetch('/api/database/reset?confirm=RESET', {
-                method: 'POST'
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                alert('✅ Database reset successfully!\n\nAll data has been deleted.');
-                loadStatements(); // Reload to show empty state
-            } else {
-                alert('Error: ' + (result.detail || 'Failed to reset database'));
-            }
-        } catch (error) {
-            console.error('Error resetting database:', error);
-            alert('Error resetting database: ' + error.message);
         }
     }
 

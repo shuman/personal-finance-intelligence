@@ -192,7 +192,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
     <!-- Top Navigation Bar -->
-    {% if request.url.path != '/login' %}
+    {% if request.url.path not in ['/login', '/guide'] %}
     <header class="relative sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-gray-200/60">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-14">
@@ -248,10 +248,10 @@
                         <i class="fas fa-receipt text-xs nav-icon"></i>
                         <span>Transactions</span>
                     </a>
-                    <a href="/accounts" data-nav="/accounts"
+                    <a href="/settings" data-nav="/settings"
                         class="nav-link flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-600">
-                        <i class="fas fa-id-card text-xs nav-icon"></i>
-                        <span>Accounts</span>
+                        <i class="fas fa-cog text-xs nav-icon"></i>
+                        <span>Settings</span>
                     </a>
                     <a href="/advisor" data-nav="/advisor"
                         class="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-sm hover:shadow-md transition-all">
@@ -316,9 +316,9 @@
                     class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
                     <i class="fas fa-receipt w-4 text-center nav-icon"></i>Transactions
                 </a>
-                <a href="/accounts" data-nav="/accounts"
+                <a href="/settings" data-nav="/settings"
                     class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
-                    <i class="fas fa-id-card w-4 text-center nav-icon"></i>Accounts
+                    <i class="fas fa-cog w-4 text-center nav-icon"></i>Settings
                 </a>
                 <a href="/reports" data-nav="/reports"
                     class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600">
@@ -358,6 +358,8 @@
                 <a href="/privacy" class="text-gray-500 hover:text-gray-700">Privacy</a>
                 <span>&middot;</span>
                 <a href="/terms" class="text-gray-500 hover:text-gray-700">Terms</a>
+                <span>&middot;</span>
+                <a href="/guide" class="text-gray-500 hover:text-gray-700">Guide</a>
                 <span>&middot;</span>
                 <span class="text-emerald-500/60"><i class="fas fa-shield-halved"></i> AES Encrypted</span>
             </div>

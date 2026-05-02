@@ -674,3 +674,112 @@ async def data_deletion_submit(
         request, "data_deletion.html",
         {"title": "Data Deletion Request", "success": True},
     )
+
+
+# ---------------------------------------------------------------------------
+# Settings: Password verification, user-scoped data reset, account deletion
+# ---------------------------------------------------------------------------
+
+class VerifyPasswordRequest(BaseModel):
+    password: str
+
+
+@router.post("/verify-password")
+async def verify_current_password(
+    body: VerifyPasswordRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Verify the current user's password. Used before dangerous operations."""
+    if not verify_password(body.password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
+    return {"valid": True}
+
+
+@router.post("/reset-my-data")
+async def reset_my_data(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Delete all financial data for the current user only.
+    Keeps the user account alive. Only user-scoped data is removed.
+    """
+    from sqlalchemy import delete as sa_delete
+    from app.models import (
+        Statement, Transaction, Fee, InterestCharge,
+        CategorySummary, RewardsSummary, Payment,
+        AiExtraction, CategoryRule, Insight, AdvisorReport,
+        Budget, Account, FinancialInstitution,
+        DailyExpense, DailyIncome,
+    )
+    from app.models.liabilities import LiabilityTemplate, MonthlyRecord, MonthlyLiability
+    import os, shutil, glob
+
+    uid = current_user.id
+
+    # Delete in child → parent order, ALL scoped to current user
+    models_to_clean = [
+        Payment, CategorySummary, RewardsSummary, InterestCharge, Fee,
+        Transaction, AiExtraction, Insight, AdvisorReport, Budget,
+        CategoryRule, DailyExpense, DailyIncome,
+        MonthlyLiability, MonthlyRecord, LiabilityTemplate,
+        Statement, Account,
+    ]
+    for model in models_to_clean:
+        await db.execute(sa_delete(model).where(model.user_id == uid))
+
+    # Re-seed institutions for this user so they still show up in dropdowns
+    from app.services.seed_data import seed_institutions
+    # Delete user's institutions last
+    await db.execute(sa_delete(FinancialInstitution).where(FinancialInstitution.user_id == uid))
+    await db.commit()
+
+    # Clean uploaded files for this user only
+    if os.path.exists(settings.upload_dir):
+        try:
+            for pattern in [f"stmt_*_{uid}_*", f"stmt_*_{current_user.uuid}_*"]:
+                for f in glob.glob(os.path.join(settings.upload_dir, pattern)):
+                    if os.path.isfile(f):
+                        os.remove(f)
+        except Exception:
+            pass
+
+    # Re-seed institutions for this user
+    await seed_institutions(db)
+
+    return {"success": True, "message": "All your financial data has been reset."}
+
+
+@router.post("/delete-my-account")
+async def delete_my_account(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Permanently delete the current user's account and ALL associated data.
+    This relies on SQLAlchemy cascade="all, delete-orphan" on User relationships.
+    """
+    uid = current_user.id
+
+    # Clean uploaded files for this user
+    import os, shutil, glob as glob_mod
+    if os.path.exists(settings.upload_dir):
+        try:
+            for pattern in [f"stmt_*_{uid}_*", f"stmt_*_{current_user.uuid}_*"]:
+                for f in glob_mod.glob(os.path.join(settings.upload_dir, pattern)):
+                    if os.path.isfile(f):
+                        os.remove(f)
+        except Exception:
+            pass
+
+    # Delete the user row — cascade will handle all related data
+    from sqlalchemy import delete as sa_delete
+    await db.execute(sa_delete(User).where(User.id == uid))
+    await db.commit()
+
+    # Clear session so user is logged out
+    request.session.clear()
+
+    return {"success": True, "message": "Account deleted permanently."}
