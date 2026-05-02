@@ -635,6 +635,8 @@ async def get_money_events(
     amount_min: Optional[float] = Query(None, description="Minimum amount"),
     amount_max: Optional[float] = Query(None, description="Maximum amount"),
     category: Optional[str] = Query(None, description="Filter by category"),
+    sort_by: str = Query("event_date", description="Sort column: event_date|source|category|description|merchant|amount_bdt|payment_method"),
+    sort_order: str = Query("desc", description="Sort direction: asc|desc"),
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=1, le=200),
     db: AsyncSession = Depends(get_db),
@@ -646,12 +648,12 @@ async def get_money_events(
     """
     from datetime import datetime as dt
 
-    # Default date range: last 12 months
+    # Default date range: last 30 days
     today = date.today()
     if date_from:
         d_from = dt.fromisoformat(date_from).date()
     else:
-        d_from = today - timedelta(days=365)
+        d_from = today - timedelta(days=30)
     if date_to:
         d_to = dt.fromisoformat(date_to).date()
     else:
@@ -674,19 +676,19 @@ async def get_money_events(
 
     # Post-fetch: filter by EventSource if specific source tab selected
     if event_source_filter is not None:
-        # For daily_expense / daily_income we fetched cash which includes both
         events = [e for e in events if e.source == event_source_filter]
 
     # Post-fetch: direction
     if direction:
         events = [e for e in events if e.direction.value == direction]
 
-    # Post-fetch: description substring
+    # Post-fetch: description / merchant substring
     if description:
         desc_lower = description.lower()
         events = [
             e for e in events
-            if e.description and desc_lower in e.description.lower()
+            if (e.description and desc_lower in e.description.lower())
+            or (e.merchant and desc_lower in e.merchant.lower())
         ]
 
     # Post-fetch: amount range
@@ -698,6 +700,19 @@ async def get_money_events(
     # Post-fetch: category
     if category:
         events = [e for e in events if e.category == category]
+
+    # Sort
+    sort_key_map = {
+        "event_date": lambda e: e.event_date,
+        "source": lambda e: e.source.value,
+        "category": lambda e: e.category or "",
+        "description": lambda e: (e.description or "").lower(),
+        "merchant": lambda e: (e.merchant or "").lower(),
+        "amount_bdt": lambda e: e.amount_bdt,
+        "payment_method": lambda e: e.payment_method.value,
+    }
+    key_fn = sort_key_map.get(sort_by, sort_key_map["event_date"])
+    events.sort(key=key_fn, reverse=(sort_order == "desc"))
 
     # Compute summary
     total_inflow = MoneyEventQuery.total_inflow(events)
@@ -750,6 +765,8 @@ async def export_money_events_csv(
     amount_min: Optional[float] = Query(None),
     amount_max: Optional[float] = Query(None),
     category: Optional[str] = Query(None),
+    sort_by: str = Query("event_date"),
+    sort_order: str = Query("desc"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -760,7 +777,7 @@ async def export_money_events_csv(
     if date_from:
         d_from = dt.fromisoformat(date_from).date()
     else:
-        d_from = today - timedelta(days=365)
+        d_from = today - timedelta(days=30)
     if date_to:
         d_to = dt.fromisoformat(date_to).date()
     else:
@@ -785,13 +802,30 @@ async def export_money_events_csv(
         events = [e for e in events if e.direction.value == direction]
     if description:
         desc_lower = description.lower()
-        events = [e for e in events if e.description and desc_lower in e.description.lower()]
+        events = [
+            e for e in events
+            if (e.description and desc_lower in e.description.lower())
+            or (e.merchant and desc_lower in e.merchant.lower())
+        ]
     if amount_min is not None:
         events = [e for e in events if e.amount_bdt >= Decimal(str(amount_min))]
     if amount_max is not None:
         events = [e for e in events if e.amount_bdt <= Decimal(str(amount_max))]
     if category:
         events = [e for e in events if e.category == category]
+
+    # Sort
+    sort_key_map = {
+        "event_date": lambda e: e.event_date,
+        "source": lambda e: e.source.value,
+        "category": lambda e: e.category or "",
+        "description": lambda e: (e.description or "").lower(),
+        "merchant": lambda e: (e.merchant or "").lower(),
+        "amount_bdt": lambda e: e.amount_bdt,
+        "payment_method": lambda e: e.payment_method.value,
+    }
+    key_fn = sort_key_map.get(sort_by, sort_key_map["event_date"])
+    events.sort(key=key_fn, reverse=(sort_order == "desc"))
 
     # Build CSV
     output = io.StringIO()

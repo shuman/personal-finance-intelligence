@@ -54,7 +54,7 @@
                    class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
             <input type="date" id="dateTo"
                    class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-            <input type="text" id="descriptionFilter" placeholder="Search description..."
+            <input type="text" id="descriptionFilter" placeholder="Search description or merchant..."
                    class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
             <select id="categoryFilter" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
                 <option value="">All Categories</option>
@@ -105,13 +105,27 @@
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Method</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:bg-gray-100" onclick="toggleSort('event_date')">
+                            Date <span id="sort-icon-event_date" class="ml-1"><i class="fas fa-sort"></i></span>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:bg-gray-100" onclick="toggleSort('source')">
+                            Source <span id="sort-icon-source" class="ml-1"><i class="fas fa-sort"></i></span>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:bg-gray-100" onclick="toggleSort('category')">
+                            Category <span id="sort-icon-category" class="ml-1"><i class="fas fa-sort"></i></span>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:bg-gray-100" onclick="toggleSort('description')">
+                            Description <span id="sort-icon-description" class="ml-1"><i class="fas fa-sort"></i></span>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:bg-gray-100" onclick="toggleSort('merchant')">
+                            Merchant <span id="sort-icon-merchant" class="ml-1"><i class="fas fa-sort"></i></span>
+                        </th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:bg-gray-100" onclick="toggleSort('amount_bdt')">
+                            Amount <span id="sort-icon-amount_bdt" class="ml-1"><i class="fas fa-sort"></i></span>
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer select-none hover:bg-gray-100" onclick="toggleSort('payment_method')">
+                            Payment Method <span id="sort-icon-payment_method" class="ml-1"><i class="fas fa-sort"></i></span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody id="eventsBody" class="bg-white divide-y divide-gray-200">
@@ -145,6 +159,8 @@
     const pageSize = 50;
     let currentSource = 'all';
     let currentDirection = '';
+    let currentSortBy = 'event_date';
+    let currentSortOrder = 'desc';
 
     const SOURCE_BADGES = {
         statement_txn: { label: 'Card', classes: 'bg-blue-100 text-blue-800' },
@@ -153,10 +169,34 @@
         liability_paid: { label: 'Bill/EMI', classes: 'bg-purple-100 text-purple-800' },
     };
 
+    function toggleSort(field) {
+        if (currentSortBy === field) {
+            currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
+        } else {
+            currentSortBy = field;
+            currentSortOrder = 'asc';
+        }
+        currentPage = 1;
+        fetchMoneyEvents();
+    }
+
+    function updateSortIcons() {
+        const fields = ['event_date', 'source', 'category', 'description', 'merchant', 'amount_bdt', 'payment_method'];
+        fields.forEach(f => {
+            const el = document.getElementById('sort-icon-' + f);
+            if (f === currentSortBy) {
+                el.innerHTML = currentSortOrder === 'asc'
+                    ? '<i class="fas fa-sort-up"></i>'
+                    : '<i class="fas fa-sort-down"></i>';
+            } else {
+                el.innerHTML = '<i class="fas fa-sort"></i>';
+            }
+        });
+    }
+
     function setSource(source) {
         currentSource = source;
         currentPage = 1;
-        // Update tab styles
         document.querySelectorAll('.source-tab').forEach(btn => {
             const s = btn.dataset.source;
             const colorMap = {
@@ -192,6 +232,8 @@
         params.set('source', currentSource);
         params.set('page', currentPage);
         params.set('page_size', pageSize);
+        params.set('sort_by', currentSortBy);
+        params.set('sort_order', currentSortOrder);
 
         const dateFrom = document.getElementById('dateFrom').value;
         const dateTo = document.getElementById('dateTo').value;
@@ -217,6 +259,7 @@
         } catch (error) {
             console.error('Error fetching money events:', error);
         }
+        updateSortIcons();
     }
 
     function renderResults(data) {
@@ -283,6 +326,8 @@
         document.getElementById('amountMax').value = '';
         document.getElementById('categoryFilter').value = '';
         currentDirection = '';
+        currentSortBy = 'event_date';
+        currentSortOrder = 'desc';
         document.querySelectorAll('.dir-tab').forEach(btn => {
             const d = btn.dataset.direction;
             if (d === '') {
@@ -298,6 +343,8 @@
     function exportResults() {
         const params = new URLSearchParams();
         params.set('source', currentSource);
+        params.set('sort_by', currentSortBy);
+        params.set('sort_order', currentSortOrder);
         if (currentDirection) params.set('direction', currentDirection);
 
         const dateFrom = document.getElementById('dateFrom').value;
@@ -321,10 +368,10 @@
 
     function setDefaultDates() {
         const today = new Date();
-        const yearAgo = new Date();
-        yearAgo.setFullYear(today.getFullYear() - 1);
+        const monthAgo = new Date();
+        monthAgo.setDate(today.getDate() - 30);
         document.getElementById('dateTo').value = today.toISOString().split('T')[0];
-        document.getElementById('dateFrom').value = yearAgo.toISOString().split('T')[0];
+        document.getElementById('dateFrom').value = monthAgo.toISOString().split('T')[0];
     }
 
     async function loadCategories() {
