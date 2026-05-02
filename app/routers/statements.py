@@ -12,10 +12,11 @@ import shutil
 
 from app.database import get_db
 from app.services import StatementService
+from app.services.money_events import MoneyEventQuery, EventSource, Direction
 from app.routers.auth import get_current_user
 from app.models import User
 from pydantic import BaseModel
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 
 
@@ -608,4 +609,210 @@ async def export_transactions_csv(
         iter([output.getvalue()]),
         media_type="text/csv",
         headers={"Content-Disposition": "attachment; filename=transactions_export.csv"}
+    )
+
+
+# ---------------------------------------------------------------------------
+# Unified Money Events endpoints
+# ---------------------------------------------------------------------------
+
+_SOURCE_FILTER_MAP = {
+    "all": ("all", None),
+    "statement_txn": ("card", EventSource.STATEMENT_TXN),
+    "daily_expense": ("cash", EventSource.DAILY_EXPENSE),
+    "daily_income": ("cash", EventSource.DAILY_INCOME),
+    "liability_paid": ("liability", EventSource.LIABILITY_PAID),
+}
+
+
+@router.get("/money-events")
+async def get_money_events(
+    date_from: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
+    source: str = Query("all", description="Source filter: all|statement_txn|daily_expense|daily_income|liability_paid"),
+    direction: Optional[str] = Query(None, description="Direction filter: inflow|outflow"),
+    description: Optional[str] = Query(None, description="Search in description (partial match)"),
+    amount_min: Optional[float] = Query(None, description="Minimum amount"),
+    amount_max: Optional[float] = Query(None, description="Maximum amount"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Unified money events endpoint — merged view across all financial data sources.
+    Returns paginated events with summary totals.
+    """
+    from datetime import datetime as dt
+
+    # Default date range: last 12 months
+    today = date.today()
+    if date_from:
+        d_from = dt.fromisoformat(date_from).date()
+    else:
+        d_from = today - timedelta(days=365)
+    if date_to:
+        d_to = dt.fromisoformat(date_to).date()
+    else:
+        d_to = today
+
+    # Map source param to payment_source + EventSource filter
+    source_cfg = _SOURCE_FILTER_MAP.get(source, _SOURCE_FILTER_MAP["all"])
+    payment_source, event_source_filter = source_cfg
+
+    # Fetch from MoneyEventQuery
+    mq = MoneyEventQuery(db)
+    events = await mq.fetch(
+        user_id=current_user.id,
+        date_from=d_from,
+        date_to=d_to,
+        payment_source=payment_source,
+        include_transfers=False,
+        include_deduped=False,
+    )
+
+    # Post-fetch: filter by EventSource if specific source tab selected
+    if event_source_filter is not None:
+        # For daily_expense / daily_income we fetched cash which includes both
+        events = [e for e in events if e.source == event_source_filter]
+
+    # Post-fetch: direction
+    if direction:
+        events = [e for e in events if e.direction.value == direction]
+
+    # Post-fetch: description substring
+    if description:
+        desc_lower = description.lower()
+        events = [
+            e for e in events
+            if e.description and desc_lower in e.description.lower()
+        ]
+
+    # Post-fetch: amount range
+    if amount_min is not None:
+        events = [e for e in events if e.amount_bdt >= Decimal(str(amount_min))]
+    if amount_max is not None:
+        events = [e for e in events if e.amount_bdt <= Decimal(str(amount_max))]
+
+    # Post-fetch: category
+    if category:
+        events = [e for e in events if e.category == category]
+
+    # Compute summary
+    total_inflow = MoneyEventQuery.total_inflow(events)
+    total_outflow = MoneyEventQuery.total_outflow(events)
+    net = total_inflow - total_outflow
+    total_count = len(events)
+
+    # Pagination
+    total_pages = max(1, (total_count + page_size - 1) // page_size)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_events = events[start:end]
+
+    return {
+        "events": [
+            {
+                "event_date": e.event_date.isoformat(),
+                "direction": e.direction.value,
+                "source": e.source.value,
+                "category": e.category,
+                "description": e.description,
+                "merchant": e.merchant,
+                "amount_bdt": float(e.amount_bdt),
+                "payment_method": e.payment_method.value,
+            }
+            for e in page_events
+        ],
+        "summary": {
+            "total_inflow": float(total_inflow),
+            "total_outflow": float(total_outflow),
+            "net": float(net),
+            "count": total_count,
+        },
+        "pagination": {
+            "page": page,
+            "page_size": page_size,
+            "total": total_count,
+            "total_pages": total_pages,
+        },
+    }
+
+
+@router.get("/money-events/export/csv")
+async def export_money_events_csv(
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    source: str = Query("all"),
+    direction: Optional[str] = Query(None),
+    description: Optional[str] = Query(None),
+    amount_min: Optional[float] = Query(None),
+    amount_max: Optional[float] = Query(None),
+    category: Optional[str] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Export filtered money events to CSV."""
+    from datetime import datetime as dt
+
+    today = date.today()
+    if date_from:
+        d_from = dt.fromisoformat(date_from).date()
+    else:
+        d_from = today - timedelta(days=365)
+    if date_to:
+        d_to = dt.fromisoformat(date_to).date()
+    else:
+        d_to = today
+
+    source_cfg = _SOURCE_FILTER_MAP.get(source, _SOURCE_FILTER_MAP["all"])
+    payment_source, event_source_filter = source_cfg
+
+    mq = MoneyEventQuery(db)
+    events = await mq.fetch(
+        user_id=current_user.id,
+        date_from=d_from,
+        date_to=d_to,
+        payment_source=payment_source,
+        include_transfers=False,
+        include_deduped=False,
+    )
+
+    if event_source_filter is not None:
+        events = [e for e in events if e.source == event_source_filter]
+    if direction:
+        events = [e for e in events if e.direction.value == direction]
+    if description:
+        desc_lower = description.lower()
+        events = [e for e in events if e.description and desc_lower in e.description.lower()]
+    if amount_min is not None:
+        events = [e for e in events if e.amount_bdt >= Decimal(str(amount_min))]
+    if amount_max is not None:
+        events = [e for e in events if e.amount_bdt <= Decimal(str(amount_max))]
+    if category:
+        events = [e for e in events if e.category == category]
+
+    # Build CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Date", "Direction", "Source", "Category", "Description", "Merchant", "Amount (BDT)", "Payment Method"])
+
+    for e in events:
+        writer.writerow([
+            e.event_date.isoformat(),
+            e.direction.value,
+            e.source.value,
+            e.category,
+            e.description or "",
+            e.merchant or "",
+            float(e.amount_bdt),
+            e.payment_method.value,
+        ])
+
+    output.seek(0)
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=money_events_export.csv"},
     )

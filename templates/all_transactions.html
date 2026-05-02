@@ -4,28 +4,70 @@
 <div class="px-4 sm:px-0">
     <div class="mb-6">
         <h1 class="text-3xl font-bold text-gray-900">All Transactions</h1>
-        <p class="text-gray-600 mt-2">Search and filter transactions across all statements</p>
+        <p class="text-gray-600 mt-2">Unified view across statements, expenses, income, and liabilities</p>
     </div>
 
-    <!-- Search and Filter Section -->
+    <!-- Source Tabs -->
+    <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="setSource('all')" data-source="all"
+                class="source-tab px-4 py-2 rounded-full text-sm font-medium border-2 border-blue-600 bg-blue-600 text-white">
+            All
+        </button>
+        <button onclick="setSource('statement_txn')" data-source="statement_txn"
+                class="source-tab px-4 py-2 rounded-full text-sm font-medium border-2 border-blue-600 text-blue-600 bg-white hover:bg-blue-50">
+            Statements
+        </button>
+        <button onclick="setSource('daily_expense')" data-source="daily_expense"
+                class="source-tab px-4 py-2 rounded-full text-sm font-medium border-2 border-orange-500 text-orange-600 bg-white hover:bg-orange-50">
+            Expenses
+        </button>
+        <button onclick="setSource('daily_income')" data-source="daily_income"
+                class="source-tab px-4 py-2 rounded-full text-sm font-medium border-2 border-green-500 text-green-600 bg-white hover:bg-green-50">
+            Income
+        </button>
+        <button onclick="setSource('liability_paid')" data-source="liability_paid"
+                class="source-tab px-4 py-2 rounded-full text-sm font-medium border-2 border-purple-500 text-purple-600 bg-white hover:bg-purple-50">
+            Liabilities
+        </button>
+    </div>
+
+    <!-- Direction Tabs -->
+    <div class="flex flex-wrap gap-2 mb-6">
+        <button onclick="setDirection('')" data-direction=""
+                class="dir-tab px-3 py-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+            All
+        </button>
+        <button onclick="setDirection('outflow')" data-direction="outflow"
+                class="dir-tab px-3 py-1.5 rounded-full text-xs font-medium bg-white text-gray-600 border hover:bg-gray-50">
+            Outflow
+        </button>
+        <button onclick="setDirection('inflow')" data-direction="inflow"
+                class="dir-tab px-3 py-1.5 rounded-full text-xs font-medium bg-white text-gray-600 border hover:bg-gray-50">
+            Inflow
+        </button>
+    </div>
+
+    <!-- Filters -->
     <div class="bg-white shadow-md rounded-lg p-6 mb-6">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-            <input type="date" id="dateFilter" placeholder="Transaction Date"
+            <input type="date" id="dateFrom"
                    class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-
+            <input type="date" id="dateTo"
+                   class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
             <input type="text" id="descriptionFilter" placeholder="Search description..."
                    class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
-
-            <input type="number" id="amountFilter" placeholder="Amount"
-                   class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" step="0.01">
-
             <select id="categoryFilter" class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
                 <option value="">All Categories</option>
             </select>
         </div>
-
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <input type="number" id="amountMin" placeholder="Min amount"
+                   class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" step="0.01">
+            <input type="number" id="amountMax" placeholder="Max amount"
+                   class="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" step="0.01">
+        </div>
         <div class="flex gap-4">
-            <button onclick="searchTransactions()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex-1">
+            <button onclick="fetchMoneyEvents()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex-1">
                 <i class="fas fa-search mr-2"></i>Search
             </button>
             <button onclick="clearFilters()" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
@@ -37,43 +79,42 @@
         </div>
     </div>
 
-    <!-- Results Summary -->
-    <div class="bg-white shadow rounded-lg p-4 mb-6">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-                <p class="text-sm text-gray-600">Total Transactions</p>
-                <p class="text-2xl font-bold text-gray-900" id="totalCount">0</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-600">Total Amount</p>
-                <p class="text-2xl font-bold text-gray-900" id="totalAmount">৳0</p>
-            </div>
-            <div>
-                <p class="text-sm text-gray-600">Date Range</p>
-                <p class="text-lg font-semibold text-gray-900" id="dateRange">-</p>
-            </div>
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white shadow rounded-lg p-4">
+            <p class="text-sm text-gray-600">Total Inflow</p>
+            <p class="text-2xl font-bold text-green-600" id="totalInflow">৳0</p>
+        </div>
+        <div class="bg-white shadow rounded-lg p-4">
+            <p class="text-sm text-gray-600">Total Outflow</p>
+            <p class="text-2xl font-bold text-red-600" id="totalOutflow">৳0</p>
+        </div>
+        <div class="bg-white shadow rounded-lg p-4">
+            <p class="text-sm text-gray-600">Net</p>
+            <p class="text-2xl font-bold" id="netAmount">৳0</p>
+        </div>
+        <div class="bg-white shadow rounded-lg p-4">
+            <p class="text-sm text-gray-600">Events</p>
+            <p class="text-2xl font-bold text-gray-700" id="totalCount">0</p>
         </div>
     </div>
 
-    <!-- Transactions Table -->
+    <!-- Events Table -->
     <div class="bg-white shadow-md rounded-lg overflow-hidden">
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50">
                     <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer" onclick="sortBy('transaction_date')">
-                            Date <i class="fas fa-sort ml-1"></i>
-                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Source</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Merchant</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer" onclick="sortBy('amount')">
-                            Amount <i class="fas fa-sort ml-1"></i>
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statement</th>
+                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Payment Method</th>
                     </tr>
                 </thead>
-                <tbody id="transactionsBody" class="bg-white divide-y divide-gray-200">
+                <tbody id="eventsBody" class="bg-white divide-y divide-gray-200">
                     <!-- Populated by JavaScript -->
                 </tbody>
             </table>
@@ -84,11 +125,12 @@
             <div class="text-sm text-gray-700">
                 Showing <span id="showingFrom">0</span> to <span id="showingTo">0</span> of <span id="totalResults">0</span> results
             </div>
-            <div class="flex gap-2">
-                <button onclick="previousPage()" id="prevBtn" class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50" disabled>
+            <div class="flex items-center gap-2">
+                <span class="text-sm text-gray-600">Page <span id="currentPageNum">1</span> of <span id="totalPages">1</span></span>
+                <button onclick="goToPage(currentPage - 1)" id="prevBtn" class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50" disabled>
                     Previous
                 </button>
-                <button onclick="nextPage()" id="nextBtn" class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50" disabled>
+                <button onclick="goToPage(currentPage + 1)" id="nextBtn" class="px-4 py-2 border rounded-lg hover:bg-gray-100 disabled:opacity-50" disabled>
                     Next
                 </button>
             </div>
@@ -100,165 +142,190 @@
 {% block extra_scripts %}
 <script>
     let currentPage = 1;
-    let pageSize = 50;
-    let totalTransactions = 0;
-    let allTransactions = [];
-    let currentSort = { field: 'transaction_date', order: 'desc' };
+    const pageSize = 50;
+    let currentSource = 'all';
+    let currentDirection = '';
 
-    async function searchTransactions() {
-        const date = document.getElementById('dateFilter').value;
-        const description = document.getElementById('descriptionFilter').value;
-        const amount = document.getElementById('amountFilter').value;
-        const category = document.getElementById('categoryFilter').value;
+    const SOURCE_BADGES = {
+        statement_txn: { label: 'Card', classes: 'bg-blue-100 text-blue-800' },
+        daily_expense: { label: 'Cash/MFS', classes: 'bg-orange-100 text-orange-800' },
+        daily_income:  { label: 'Income', classes: 'bg-green-100 text-green-800' },
+        liability_paid: { label: 'Bill/EMI', classes: 'bg-purple-100 text-purple-800' },
+    };
 
-        try {
-            // Build query params
-            const params = new URLSearchParams();
-            if (date) params.append('date', date);
-            if (description) params.append('description', description);
-            if (amount) params.append('amount', amount);
-            if (category) params.append('category', category);
-
-            const response = await fetch(`/api/transactions/search?${params}`);
-            allTransactions = await response.json();
-
-            currentPage = 1;
-            displayResults();
-        } catch (error) {
-            console.error('Error searching transactions:', error);
-            alert('Error searching transactions');
-        }
-    }
-
-    function displayResults() {
-        const tbody = document.getElementById('transactionsBody');
-
-        // Sort transactions
-        const sorted = [...allTransactions].sort((a, b) => {
-            let aVal = a[currentSort.field];
-            let bVal = b[currentSort.field];
-
-            if (currentSort.field === 'amount') {
-                aVal = parseFloat(aVal);
-                bVal = parseFloat(bVal);
-            }
-
-            if (currentSort.order === 'asc') {
-                return aVal > bVal ? 1 : -1;
+    function setSource(source) {
+        currentSource = source;
+        currentPage = 1;
+        // Update tab styles
+        document.querySelectorAll('.source-tab').forEach(btn => {
+            const s = btn.dataset.source;
+            const colorMap = {
+                all: 'blue', statement_txn: 'blue',
+                daily_expense: 'orange', daily_income: 'green', liability_paid: 'purple'
+            };
+            const c = colorMap[s];
+            if (s === source) {
+                btn.className = `source-tab px-4 py-2 rounded-full text-sm font-medium border-2 border-${c}-600 bg-${c}-600 text-white`;
             } else {
-                return aVal < bVal ? 1 : -1;
+                btn.className = `source-tab px-4 py-2 rounded-full text-sm font-medium border-2 border-${c}-600 text-${c}-600 bg-white hover:bg-${c}-50`;
             }
         });
-
-        // Paginate
-        const start = (currentPage - 1) * pageSize;
-        const end = start + pageSize;
-        const pageTransactions = sorted.slice(start, end);
-
-        tbody.innerHTML = pageTransactions.map(txn => `
-            <tr class="hover:bg-gray-50">
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${new Date(txn.transaction_date).toLocaleDateString()}
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-900">
-                    ${txn.description_raw || '-'}
-                </td>
-                <td class="px-6 py-4 text-sm text-gray-600">
-                    ${txn.merchant_name || '-'}
-                </td>
-                <td class="px-6 py-4 text-sm">
-                    <span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                        ${txn.merchant_category || 'Other'}
-                    </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-right ${txn.debit_credit === 'C' ? 'text-green-600' : 'text-gray-900'}">
-                    ${txn.debit_credit === 'C' ? '+' : ''}৳${Number(txn.amount).toLocaleString()}
-                </td>
-                <td class="px-6 py-4 text-sm">
-                    <a href="/statements/${txn.statement_id}" class="text-blue-600 hover:text-blue-800">
-                        ${txn.statement_filename || 'View'}
-                    </a>
-                </td>
-            </tr>
-        `).join('');
-
-        // Update summary
-        document.getElementById('totalCount').textContent = allTransactions.length;
-
-        const total = allTransactions.reduce((sum, txn) => {
-            return sum + (txn.debit_credit === 'D' ? parseFloat(txn.amount) : -parseFloat(txn.amount));
-        }, 0);
-        document.getElementById('totalAmount').textContent = '৳' + total.toLocaleString();
-
-        if (allTransactions.length > 0) {
-            const dates = allTransactions.map(t => new Date(t.transaction_date)).sort((a, b) => a - b);
-            const minDate = dates[0].toLocaleDateString();
-            const maxDate = dates[dates.length - 1].toLocaleDateString();
-            document.getElementById('dateRange').textContent = `${minDate} - ${maxDate}`;
-        }
-
-        // Update pagination
-        document.getElementById('showingFrom').textContent = start + 1;
-        document.getElementById('showingTo').textContent = Math.min(end, allTransactions.length);
-        document.getElementById('totalResults').textContent = allTransactions.length;
-
-        document.getElementById('prevBtn').disabled = currentPage === 1;
-        document.getElementById('nextBtn').disabled = end >= allTransactions.length;
+        fetchMoneyEvents();
     }
 
-    function sortBy(field) {
-        if (currentSort.field === field) {
-            currentSort.order = currentSort.order === 'asc' ? 'desc' : 'asc';
+    function setDirection(dir) {
+        currentDirection = dir;
+        currentPage = 1;
+        document.querySelectorAll('.dir-tab').forEach(btn => {
+            const d = btn.dataset.direction;
+            if (d === dir) {
+                btn.className = 'dir-tab px-3 py-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700';
+            } else {
+                btn.className = 'dir-tab px-3 py-1.5 rounded-full text-xs font-medium bg-white text-gray-600 border hover:bg-gray-50';
+            }
+        });
+        fetchMoneyEvents();
+    }
+
+    async function fetchMoneyEvents() {
+        const params = new URLSearchParams();
+        params.set('source', currentSource);
+        params.set('page', currentPage);
+        params.set('page_size', pageSize);
+
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        if (currentDirection) params.set('direction', currentDirection);
+
+        const description = document.getElementById('descriptionFilter').value;
+        if (description) params.set('description', description);
+
+        const amountMin = document.getElementById('amountMin').value;
+        const amountMax = document.getElementById('amountMax').value;
+        if (amountMin) params.set('amount_min', amountMin);
+        if (amountMax) params.set('amount_max', amountMax);
+
+        const category = document.getElementById('categoryFilter').value;
+        if (category) params.set('category', category);
+
+        try {
+            const response = await fetch(`/api/money-events?${params}`);
+            const data = await response.json();
+            renderResults(data);
+        } catch (error) {
+            console.error('Error fetching money events:', error);
+        }
+    }
+
+    function renderResults(data) {
+        const { events, summary, pagination } = data;
+
+        // Summary cards
+        document.getElementById('totalInflow').textContent = '৳' + Number(summary.total_inflow).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+        document.getElementById('totalOutflow').textContent = '৳' + Number(summary.total_outflow).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+
+        const net = summary.net;
+        const netEl = document.getElementById('netAmount');
+        netEl.textContent = (net >= 0 ? '+' : '') + '৳' + Number(net).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+        netEl.className = 'text-2xl font-bold ' + (net >= 0 ? 'text-blue-600' : 'text-red-600');
+
+        document.getElementById('totalCount').textContent = summary.count.toLocaleString();
+
+        // Table
+        const tbody = document.getElementById('eventsBody');
+        if (events.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">No events found</td></tr>';
         } else {
-            currentSort.field = field;
-            currentSort.order = 'desc';
+            tbody.innerHTML = events.map(e => {
+                const badge = SOURCE_BADGES[e.source] || { label: e.source, classes: 'bg-gray-100 text-gray-800' };
+                const isOutflow = e.direction === 'outflow';
+                const amtStr = (isOutflow ? '-' : '+') + '৳' + Number(e.amount_bdt).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 2});
+                const amtColor = isOutflow ? 'text-red-600' : 'text-green-600';
+                return `<tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${formatDate(e.event_date)}</td>
+                    <td class="px-6 py-4 text-sm"><span class="px-2 py-1 text-xs rounded-full ${badge.classes}">${badge.label}</span></td>
+                    <td class="px-6 py-4 text-sm text-gray-700">${e.category || 'Other'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${e.description || '-'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${e.merchant || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium ${amtColor}">${amtStr}</td>
+                    <td class="px-6 py-4 text-sm text-gray-600">${e.payment_method}</td>
+                </tr>`;
+            }).join('');
         }
-        displayResults();
+
+        // Pagination
+        document.getElementById('showingFrom').textContent = ((pagination.page - 1) * pagination.page_size) + 1;
+        document.getElementById('showingTo').textContent = Math.min(pagination.page * pagination.page_size, pagination.total);
+        document.getElementById('totalResults').textContent = pagination.total.toLocaleString();
+        document.getElementById('currentPageNum').textContent = pagination.page;
+        document.getElementById('totalPages').textContent = pagination.total_pages;
+
+        document.getElementById('prevBtn').disabled = pagination.page <= 1;
+        document.getElementById('nextBtn').disabled = pagination.page >= pagination.total_pages;
     }
 
-    function previousPage() {
-        if (currentPage > 1) {
-            currentPage--;
-            displayResults();
-        }
+    function formatDate(dateStr) {
+        const d = new Date(dateStr + 'T00:00:00');
+        return d.toLocaleDateString();
     }
 
-    function nextPage() {
-        if (currentPage * pageSize < allTransactions.length) {
-            currentPage++;
-            displayResults();
-        }
+    function goToPage(page) {
+        currentPage = page;
+        fetchMoneyEvents();
     }
 
     function clearFilters() {
-        document.getElementById('dateFilter').value = '';
+        setDefaultDates();
         document.getElementById('descriptionFilter').value = '';
-        document.getElementById('amountFilter').value = '';
+        document.getElementById('amountMin').value = '';
+        document.getElementById('amountMax').value = '';
         document.getElementById('categoryFilter').value = '';
-        allTransactions = [];
-        displayResults();
+        currentDirection = '';
+        document.querySelectorAll('.dir-tab').forEach(btn => {
+            const d = btn.dataset.direction;
+            if (d === '') {
+                btn.className = 'dir-tab px-3 py-1.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700';
+            } else {
+                btn.className = 'dir-tab px-3 py-1.5 rounded-full text-xs font-medium bg-white text-gray-600 border hover:bg-gray-50';
+            }
+        });
+        currentPage = 1;
+        fetchMoneyEvents();
     }
 
-    async function exportResults() {
-        const date = document.getElementById('dateFilter').value;
-        const description = document.getElementById('descriptionFilter').value;
-        const amount = document.getElementById('amountFilter').value;
-        const category = document.getElementById('categoryFilter').value;
-
+    function exportResults() {
         const params = new URLSearchParams();
-        if (date) params.append('date', date);
-        if (description) params.append('description', description);
-        if (amount) params.append('amount', amount);
-        if (category) params.append('category', category);
+        params.set('source', currentSource);
+        if (currentDirection) params.set('direction', currentDirection);
 
-        window.location.href = `/api/transactions/export/csv?${params}`;
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+
+        const description = document.getElementById('descriptionFilter').value;
+        if (description) params.set('description', description);
+
+        const amountMin = document.getElementById('amountMin').value;
+        const amountMax = document.getElementById('amountMax').value;
+        if (amountMin) params.set('amount_min', amountMin);
+        if (amountMax) params.set('amount_max', amountMax);
+
+        const category = document.getElementById('categoryFilter').value;
+        if (category) params.set('category', category);
+
+        window.location.href = `/api/money-events/export/csv?${params}`;
     }
 
-    // Load all transactions on page load
-    window.onload = async () => {
-        await loadCategories();
-        searchTransactions();
-    };
+    function setDefaultDates() {
+        const today = new Date();
+        const yearAgo = new Date();
+        yearAgo.setFullYear(today.getFullYear() - 1);
+        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        document.getElementById('dateFrom').value = yearAgo.toISOString().split('T')[0];
+    }
 
     async function loadCategories() {
         try {
@@ -275,5 +342,12 @@
             console.error('Failed to load categories:', e);
         }
     }
+
+    // Initialize
+    window.onload = async () => {
+        setDefaultDates();
+        await loadCategories();
+        fetchMoneyEvents();
+    };
 </script>
 {% endblock %}
